@@ -50,7 +50,7 @@ export default function Welcome() {
                 <main className="flex-1 flex flex-col items-center justify-center z-10 px-6 pt-32 pb-20 text-center">
                     <div className="inline-flex items-center rounded-full border border-teal-200 dark:border-neutral-800 bg-teal-50 dark:bg-neutral-900 px-3 py-1 text-sm text-teal-600 dark:text-neutral-300 mb-8 backdrop-blur-sm shadow-sm transition-all hover:scale-105 cursor-default">
                         <span className="flex h-2 w-2 rounded-full bg-teal-500 dark:bg-neutral-500 mr-2 animate-pulse"></span>
-                        Sistem Informasi & Monitoring
+                        Sistem Informasi & Monitorin
                     </div>
                     
                     <h1 className="max-w-4xl text-5xl md:text-7xl font-extrabold tracking-tight text-blue-950 dark:text-white mb-6 leading-tight">
