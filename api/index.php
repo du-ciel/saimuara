@@ -1,7 +1,20 @@
 <?php
 
-if (!is_dir('/tmp/views')) {
-    mkdir('/tmp/views', 0777, true);
+$dirs = [
+    '/tmp/views',
+    '/tmp/storage',
+    '/tmp/storage/framework',
+    '/tmp/storage/framework/cache',
+    '/tmp/storage/framework/cache/data',
+    '/tmp/storage/framework/sessions',
+    '/tmp/storage/framework/views',
+    '/tmp/storage/logs',
+];
+
+foreach ($dirs as $dir) {
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
 }
 
 // Mengarahkan semua request Vercel (dari folder api) ke file utama Laravel (di folder public)
