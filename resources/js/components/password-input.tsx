@@ -7,22 +7,28 @@ import { cn } from '@/lib/utils';
 export default function PasswordInput({
     className,
     ref,
+    icon,
     ...props
-}: Omit<ComponentProps<'input'>, 'type'> & { ref?: Ref<HTMLInputElement> }) {
+}: Omit<ComponentProps<'input'>, 'type'> & { ref?: Ref<HTMLInputElement>; icon?: React.ReactNode }) {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
         <div className="relative">
+            {icon && (
+                <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 z-10">
+                    {icon}
+                </div>
+            )}
             <Input
                 type={showPassword ? 'text' : 'password'}
-                className={cn('pr-10', className)}
+                className={cn('pr-10', icon ? 'pl-10' : '', className)}
                 ref={ref}
                 {...props}
             />
             <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 focus-visible:ring-[3px] focus-visible:outline-none"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute inset-y-0 right-0 flex items-center rounded-r-md px-3 focus-visible:ring-[3px] focus-visible:outline-none cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 tabIndex={-1}
             >
