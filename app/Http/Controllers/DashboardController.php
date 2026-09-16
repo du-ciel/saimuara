@@ -16,6 +16,7 @@ class DashboardController extends Controller
         
         $search = $request->input('search');
         $kabupaten = $request->input('kabupaten');
+        $periode = $request->input('periode', 'semua');
 
         // Base query for Pokdakan based on role
         $pokdakanQuery = Pokdakan::with(['laporanMesinPakan', 'laporanKolamRas', 'user']);
@@ -55,16 +56,36 @@ class DashboardController extends Controller
             ->whereIn('pokdakan_id', $pokdakanIds)
             ->orderBy('tanggal_input', 'desc');
 
+        // Filter periode tanggal untuk laporan produksi & operasional
+        if ($periode && $periode !== 'semua') {
+            $startDate = match ($periode) {
+                'hari' => now()->startOfDay(),
+                'minggu' => now()->subDays(7)->startOfDay(),
+                'bulan' => now()->startOfMonth(),
+                'tahun' => now()->startOfYear(),
+                default => null,
+            };
+
+            if ($startDate) {
+                $laporanMesinQuery->where('tanggal_input', '>=', $startDate->toDateString());
+                $laporanRasQuery->where('tanggal_input', '>=', $startDate->toDateString());
+            }
+        }
+
         $laporanMesin = $laporanMesinQuery->get();
         $laporanRas = $laporanRasQuery->get();
 
-        // Hitung Mesin Aktif & Non-aktif berdasarkan laporan status terbaru tiap pokdakan
+        // Hitung Mesin Aktif & Non-aktif berdasarkan status laporan (periode ini atau terkini)
         $mesinAktif = 0;
         $mesinNonAktif = 0;
         foreach ($pokdakans as $p) {
             $jmlMesin = (int) $p->jumlah_mesin_pakan;
             if ($jmlMesin > 0) {
                 $latestMesin = $laporanMesin->where('pokdakan_id', $p->id)->sortByDesc('tanggal_input')->first();
+                if (!$latestMesin) {
+                    $latestMesin = LaporanMesinPakan::where('pokdakan_id', $p->id)->orderBy('tanggal_input', 'desc')->first();
+                }
+
                 if ($latestMesin && !str_contains(strtolower($latestMesin->status_mesin), 'baik')) {
                     $mesinNonAktif += $jmlMesin;
                 } else {
@@ -73,13 +94,17 @@ class DashboardController extends Controller
             }
         }
 
-        // Hitung Kolam Aktif & Non-aktif berdasarkan status siklus terbaru
+        // Hitung Kolam Aktif & Non-aktif berdasarkan status siklus (periode ini atau terkini)
         $kolamAktif = 0;
         $kolamNonAktif = 0;
         foreach ($pokdakans as $p) {
             $jmlKolam = (int) $p->jumlah_kolam_ras;
             if ($jmlKolam > 0) {
                 $latestRas = $laporanRas->where('pokdakan_id', $p->id)->sortByDesc('tanggal_input')->first();
+                if (!$latestRas) {
+                    $latestRas = LaporanKolamRas::where('pokdakan_id', $p->id)->orderBy('tanggal_input', 'desc')->first();
+                }
+
                 if ($latestRas && str_contains(strtolower($latestRas->status_siklus), 'gagal')) {
                     $kolamNonAktif += $jmlKolam;
                 } else {
@@ -112,6 +137,7 @@ class DashboardController extends Controller
             'total_produksi_ikan' => $totalProduksiIkan,
             'total_benih_ikan' => $totalBenihIkan,
             'total_pendapatan_ras' => $totalPendapatanRas,
+            'periode' => $periode,
         ];
         
         // Daftar 15 Kabupaten & Kota di Provinsi Lampung dengan titik koordinat pusat
@@ -214,6 +240,7 @@ class DashboardController extends Controller
             'filters' => [
                 'search' => $search,
                 'kabupaten' => $kabupaten,
+                'periode' => $periode,
             ],
             'list_kabupaten' => $listKabupaten
         ]);
