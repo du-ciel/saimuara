@@ -886,15 +886,15 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
             {/* MODALS */}
             {/* Modal: Daftar Pokdakan Terdaftar (Card List View) */}
             <Dialog open={isPokdakanListModalOpen} onOpenChange={setIsPokdakanListModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] !max-w-7xl sm:!max-w-7xl max-h-[90vh] overflow-y-auto p-6 md:p-8">
                     <DialogHeader>
                         <div className="flex items-center justify-between pr-6">
                             <div>
-                                <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
-                                    <Users className="h-5 w-5 text-blue-600" />
+                                <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
+                                    <Users className="h-6 w-6 text-blue-600" />
                                     Daftar Pokdakan Terdaftar ({pokdakans.length} Kelompok)
                                 </DialogTitle>
-                                <DialogDescription className="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+                                <DialogDescription className="mt-1.5 text-xs md:text-sm text-slate-500 dark:text-neutral-400">
                                     {selectedKabupaten && selectedKabupaten !== 'semua'
                                         ? `Kelompok pembudidaya ikan di wilayah ${selectedKabupaten}`
                                         : 'Seluruh kelompok pembudidaya ikan terdaftar di Provinsi Lampung'}
@@ -904,21 +904,22 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         </div>
                     </DialogHeader>
 
-                    {/* Card Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+                    {/* Card Grid - Wide & Spacious */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 py-4">
                         {pokdakans.map((p) => (
                             <div
                                 key={`modal-pokdakan-${p.id}`}
-                                className="group rounded-xl border border-slate-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                                className="group rounded-2xl border border-slate-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-5 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col justify-between"
                             >
-                                <div>
-                                    <div className="flex items-start justify-between gap-2 mb-2.5">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <div className="space-y-3.5">
+                                    {/* Header Card */}
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950/70 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-2xs">
                                                 <Building2 className="h-5 w-5" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                                                <h4 className="font-bold text-base text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                                     {p.nama_pokdakan}
                                                 </h4>
                                                 <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-mono">
@@ -926,55 +927,59 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 </span>
                                             </div>
                                         </div>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40 shrink-0">
+                                        <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200/70 dark:border-blue-900/50 shrink-0">
                                             TA {p.tahun_anggaran}
                                         </span>
                                     </div>
 
                                     {/* Kontak & Lokasi */}
-                                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-neutral-300 mb-3 bg-slate-50 dark:bg-neutral-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-neutral-800/60">
+                                    <div className="space-y-2 text-xs text-slate-600 dark:text-neutral-300 bg-slate-50 dark:bg-neutral-800/60 p-3 rounded-xl border border-slate-100 dark:border-neutral-800/80">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 dark:text-neutral-400">Ketua:</span>
-                                            <span className="font-semibold text-slate-800 dark:text-neutral-200">{p.nama_ketua}</span>
+                                            <span className="text-slate-500 dark:text-neutral-400">Ketua Kelompok:</span>
+                                            <span className="font-semibold text-slate-800 dark:text-neutral-100">{p.nama_ketua}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 dark:text-neutral-400">WhatsApp:</span>
+                                            <span className="text-slate-500 dark:text-neutral-400">Kontak WhatsApp:</span>
                                             <a
                                                 href={`https://wa.me/${p.no_whatsapp?.replace(/[^0-9]/g, '')}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium inline-flex items-center gap-1"
+                                                className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium inline-flex items-center gap-1.5 hover:underline"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
-                                                <Phone className="h-3 w-3" />
-                                                {p.no_whatsapp}
+                                                <Phone className="h-3.5 w-3.5" />
+                                                <span>{p.no_whatsapp}</span>
                                             </a>
                                         </div>
-                                        <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-200/50 dark:border-neutral-700/50">
+                                        <div className="flex items-start justify-between gap-2 pt-1.5 border-t border-slate-200/60 dark:border-neutral-700/60">
                                             <span className="text-slate-500 dark:text-neutral-400 shrink-0">Wilayah:</span>
-                                            <span className="text-right text-[11px] font-medium">
-                                                {p.pekon_desa}, Kec. {p.kecamatan}, <strong>{p.kabupaten_kota}</strong>
+                                            <span className="text-right text-[11px] font-medium leading-relaxed">
+                                                {p.pekon_desa}, Kec. {p.kecamatan}, <strong className="text-slate-800 dark:text-neutral-100">{p.kabupaten_kota}</strong>
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Rincian Aset Bantuan */}
-                                    <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                                        <div className="bg-amber-50/80 dark:bg-amber-950/30 p-2 rounded-lg border border-amber-200/50 dark:border-amber-900/30">
-                                            <div className="flex items-center justify-between font-semibold text-amber-900 dark:text-amber-300 text-[11px]">
-                                                <span className="flex items-center gap-1"><Cog className="h-3 w-3 text-amber-600" /> Mesin</span>
-                                                <span className="font-bold text-amber-700 dark:text-amber-400">{p.jumlah_mesin_pakan} Unit</span>
+                                    <div className="grid grid-cols-2 gap-2.5 text-xs">
+                                        <div className="bg-amber-50/90 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between font-semibold text-amber-900 dark:text-amber-200 text-xs">
+                                                <span className="flex items-center gap-1.5"><Cog className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Mesin</span>
+                                                <span className="font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-900/50 px-1.5 py-0.5 rounded text-[11px]">
+                                                    {p.jumlah_mesin_pakan} Unit
+                                                </span>
                                             </div>
-                                            <div className="text-[10px] text-slate-500 dark:text-neutral-400 mt-0.5 truncate" title={p.spesifikasi_mesin}>
+                                            <div className="text-[11px] text-slate-500 dark:text-neutral-400 mt-1 truncate" title={p.spesifikasi_mesin}>
                                                 {p.spesifikasi_mesin || 'Standar operasional'}
                                             </div>
                                         </div>
-                                        <div className="bg-cyan-50/80 dark:bg-cyan-950/30 p-2 rounded-lg border border-cyan-200/50 dark:border-cyan-900/30">
-                                            <div className="flex items-center justify-between font-semibold text-cyan-900 dark:text-cyan-300 text-[11px]">
-                                                <span className="flex items-center gap-1"><Waves className="h-3 w-3 text-cyan-600" /> Kolam</span>
-                                                <span className="font-bold text-cyan-700 dark:text-cyan-400">{p.jumlah_kolam_ras} Unit</span>
+                                        <div className="bg-cyan-50/90 dark:bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-200/60 dark:border-cyan-900/40 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between font-semibold text-cyan-900 dark:text-cyan-200 text-xs">
+                                                <span className="flex items-center gap-1.5"><Waves className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" /> Kolam</span>
+                                                <span className="font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-100/80 dark:bg-cyan-900/50 px-1.5 py-0.5 rounded text-[11px]">
+                                                    {p.jumlah_kolam_ras} Unit
+                                                </span>
                                             </div>
-                                            <div className="text-[10px] text-slate-500 dark:text-neutral-400 mt-0.5 truncate" title={p.spesifikasi_kolam}>
+                                            <div className="text-[11px] text-slate-500 dark:text-neutral-400 mt-1 truncate" title={p.spesifikasi_kolam}>
                                                 {p.spesifikasi_kolam || 'Bioflok RAS'}
                                             </div>
                                         </div>
@@ -982,11 +987,11 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 </div>
 
                                 {/* Tombol aksi */}
-                                <div className="pt-2 border-t border-slate-100 dark:border-neutral-800">
+                                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-neutral-800">
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="w-full text-xs h-8 bg-slate-50 dark:bg-neutral-800/80 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-400 border-slate-200 dark:border-neutral-700"
+                                        className="w-full text-xs h-9 bg-slate-50 dark:bg-neutral-800/80 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-400 border-slate-200 dark:border-neutral-700 font-medium cursor-pointer"
                                         onClick={() => {
                                             setSelectedPokdakan(p);
                                         }}
@@ -998,17 +1003,18 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         ))}
 
                         {pokdakans.length === 0 && (
-                            <div className="col-span-full py-12 text-center text-slate-500">
+                            <div className="col-span-full py-16 text-center text-slate-500">
+                                <Users className="h-10 w-10 text-slate-300 dark:text-neutral-600 mx-auto mb-2" />
                                 Tidak ada pokdakan terdaftar yang sesuai filter.
                             </div>
                         )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-neutral-800">
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-neutral-800">
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1"
+                            className="text-xs md:text-sm text-blue-600 dark:text-blue-400 flex items-center gap-1.5 hover:bg-blue-50 dark:hover:bg-blue-950/50"
                             onClick={() => {
                                 setIsPokdakanListModalOpen(false);
                                 scrollToPokdakanCards();
@@ -1019,7 +1025,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         <Button
                             variant="secondary"
                             size="sm"
-                            className="text-xs"
+                            className="text-xs md:text-sm px-4 h-9"
                             onClick={() => setIsPokdakanListModalOpen(false)}
                         >
                             Tutup
@@ -1030,7 +1036,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
 
             {/* Pokdakan Dialog */}
             <Dialog open={!!selectedPokdakan} onOpenChange={() => setSelectedPokdakan(null)}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="w-[90vw] !max-w-lg sm:!max-w-xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Detail Kelompok Pembudidaya (Pokdakan)</DialogTitle>
                         <DialogDescription>
