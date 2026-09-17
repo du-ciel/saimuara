@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { 
     Users, Settings, ArrowRight, Waves, FileText, FileSearch, Scale, Search, Filter, Cog, MapPin, Phone, Building2,
     Fish, CheckCircle2, XCircle, PackageCheck, AlertTriangle, TrendingUp, Layers, Activity, RotateCcw,
-    LayoutGrid, Table2, Calendar
+    LayoutGrid, Table2, Calendar, Pencil, Trash2, History, Clock
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +17,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from 'sonner';
 import {
   BarChart,
   Bar,
@@ -46,6 +48,23 @@ interface Pokdakan {
     [key: string]: any;
 }
 
+interface LaporanRiwayat {
+    id: number;
+    riwayatable_type: string;
+    riwayatable_id: number;
+    user_id: number;
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+    };
+    action: string;
+    perubahan: Record<string, { sebelum: any; sesudah: any }>;
+    catatan: string | null;
+    created_at: string;
+}
+
 interface LaporanMesin {
     id: number;
     pokdakan: Pokdakan;
@@ -55,6 +74,7 @@ interface LaporanMesin {
     bahan_baku_utama: string;
     biaya_produksi_per_kg: number;
     keterangan_kendala: string;
+    riwayat?: LaporanRiwayat[];
     [key: string]: any;
 }
 
@@ -64,11 +84,17 @@ interface LaporanRas {
     tanggal_input: string;
     siklus_ke: number;
     status_siklus: string;
+    tanggal_tebar?: string;
     komoditas_ikan: string;
     jumlah_benih_ekor: number;
+    ukuran_benih_cm?: string;
     kondisi_air: string;
+    kendala_penyakit?: string;
+    tanggal_panen?: string;
     total_panen_kg: number;
+    harga_jual_per_kg?: number;
     total_pendapatan: number;
+    riwayat?: LaporanRiwayat[];
     [key: string]: any;
 }
 
@@ -117,6 +143,184 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
     const [isPokdakanListModalOpen, setIsPokdakanListModalOpen] = useState(false);
     const [selectedLaporanMesin, setSelectedLaporanMesin] = useState<LaporanMesin | null>(null);
     const [selectedLaporanRas, setSelectedLaporanRas] = useState<LaporanRas | null>(null);
+
+    // Admin Edit, Delete & Riwayat States
+    const [editingMesin, setEditingMesin] = useState<LaporanMesin | null>(null);
+    const [editMesinForm, setEditMesinForm] = useState({
+        tanggal_input: '',
+        status_mesin: 'Baik',
+        produksi_pakan_kg: '',
+        bahan_baku_utama: '',
+        biaya_produksi_per_kg: '',
+        keterangan_kendala: '',
+        catatan_perubahan: '',
+    });
+    const [isSubmittingEditMesin, setIsSubmittingEditMesin] = useState(false);
+
+    const [editingRas, setEditingRas] = useState<LaporanRas | null>(null);
+    const [editRasForm, setEditRasForm] = useState({
+        tanggal_input: '',
+        siklus_ke: 1,
+        status_siklus: 'Berjalan',
+        tanggal_tebar: '',
+        komoditas_ikan: '',
+        jumlah_benih_ekor: '',
+        ukuran_benih_cm: '',
+        kondisi_air: '',
+        kendala_penyakit: '',
+        tanggal_panen: '',
+        total_panen_kg: '',
+        harga_jual_per_kg: '',
+        total_pendapatan: '',
+        catatan_perubahan: '',
+    });
+    const [isSubmittingEditRas, setIsSubmittingEditRas] = useState(false);
+
+    const [deletingItem, setDeletingItem] = useState<{
+        type: 'mesin' | 'ras';
+        id: number;
+        title: string;
+        subtitle: string;
+    } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [viewingRiwayat, setViewingRiwayat] = useState<{
+        type: 'mesin' | 'ras';
+        title: string;
+        riwayat: LaporanRiwayat[];
+    } | null>(null);
+
+    const formatDateTime = (dateStr: string) => {
+        if (!dateStr) return '-';
+        try {
+            const d = new Date(dateStr);
+            return new Intl.DateTimeFormat('id-ID', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            }).format(d);
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
+    const fieldLabels: Record<string, string> = {
+        tanggal_input: 'Tanggal Input',
+        status_mesin: 'Status Mesin',
+        produksi_pakan_kg: 'Produksi Pakan (Kg)',
+        bahan_baku_utama: 'Bahan Baku Utama',
+        biaya_produksi_per_kg: 'Biaya Produksi / Kg',
+        keterangan_kendala: 'Keterangan / Kendala',
+        siklus_ke: 'Siklus Ke',
+        status_siklus: 'Status Siklus',
+        tanggal_tebar: 'Tanggal Tebar',
+        komoditas_ikan: 'Komoditas Ikan',
+        jumlah_benih_ekor: 'Jumlah Benih (Ekor)',
+        ukuran_benih_cm: 'Ukuran Benih (cm)',
+        kondisi_air: 'Kondisi Air',
+        kendala_penyakit: 'Kendala Penyakit',
+        tanggal_panen: 'Tanggal Panen',
+        total_panen_kg: 'Total Panen (Kg)',
+        harga_jual_per_kg: 'Harga Jual / Kg',
+        total_pendapatan: 'Total Pendapatan',
+    };
+
+    const handleOpenEditMesin = (lm: LaporanMesin) => {
+        setEditMesinForm({
+            tanggal_input: lm.tanggal_input ? lm.tanggal_input.substring(0, 10) : '',
+            status_mesin: lm.status_mesin || 'Baik',
+            produksi_pakan_kg: lm.produksi_pakan_kg !== undefined && lm.produksi_pakan_kg !== null ? String(lm.produksi_pakan_kg) : '',
+            bahan_baku_utama: lm.bahan_baku_utama || '',
+            biaya_produksi_per_kg: lm.biaya_produksi_per_kg !== undefined && lm.biaya_produksi_per_kg !== null ? String(lm.biaya_produksi_per_kg) : '',
+            keterangan_kendala: lm.keterangan_kendala || '',
+            catatan_perubahan: '',
+        });
+        setEditingMesin(lm);
+    };
+
+    const handleSubmitEditMesin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingMesin) return;
+        setIsSubmittingEditMesin(true);
+        router.put(`/admin/laporan/mesin/${editingMesin.id}`, editMesinForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Laporan Mesin Pakan berhasil diperbarui');
+                setEditingMesin(null);
+                setSelectedLaporanMesin(null);
+            },
+            onError: (errors) => {
+                const firstErr = Object.values(errors)[0];
+                toast.error(typeof firstErr === 'string' ? firstErr : 'Gagal memperbarui laporan mesin');
+            },
+            onFinish: () => {
+                setIsSubmittingEditMesin(false);
+            },
+        });
+    };
+
+    const handleOpenEditRas = (lr: LaporanRas) => {
+        setEditRasForm({
+            tanggal_input: lr.tanggal_input ? lr.tanggal_input.substring(0, 10) : '',
+            siklus_ke: lr.siklus_ke || 1,
+            status_siklus: lr.status_siklus || 'Berjalan',
+            tanggal_tebar: lr.tanggal_tebar ? lr.tanggal_tebar.substring(0, 10) : '',
+            komoditas_ikan: lr.komoditas_ikan || '',
+            jumlah_benih_ekor: lr.jumlah_benih_ekor !== undefined && lr.jumlah_benih_ekor !== null ? String(lr.jumlah_benih_ekor) : '',
+            ukuran_benih_cm: lr.ukuran_benih_cm || '',
+            kondisi_air: lr.kondisi_air || '',
+            kendala_penyakit: lr.kendala_penyakit || '',
+            tanggal_panen: lr.tanggal_panen ? lr.tanggal_panen.substring(0, 10) : '',
+            total_panen_kg: lr.total_panen_kg !== undefined && lr.total_panen_kg !== null ? String(lr.total_panen_kg) : '',
+            harga_jual_per_kg: lr.harga_jual_per_kg !== undefined && lr.harga_jual_per_kg !== null ? String(lr.harga_jual_per_kg) : '',
+            total_pendapatan: lr.total_pendapatan !== undefined && lr.total_pendapatan !== null ? String(lr.total_pendapatan) : '',
+            catatan_perubahan: '',
+        });
+        setEditingRas(lr);
+    };
+
+    const handleSubmitEditRas = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingRas) return;
+        setIsSubmittingEditRas(true);
+        router.put(`/admin/laporan/ras/${editingRas.id}`, editRasForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Laporan Budidaya Kolam RAS berhasil diperbarui');
+                setEditingRas(null);
+                setSelectedLaporanRas(null);
+            },
+            onError: (errors) => {
+                const firstErr = Object.values(errors)[0];
+                toast.error(typeof firstErr === 'string' ? firstErr : 'Gagal memperbarui laporan RAS');
+            },
+            onFinish: () => {
+                setIsSubmittingEditRas(false);
+            },
+        });
+    };
+
+    const handleDelete = () => {
+        if (!deletingItem) return;
+        setIsDeleting(true);
+        const url = deletingItem.type === 'mesin'
+            ? `/admin/laporan/mesin/${deletingItem.id}`
+            : `/admin/laporan/ras/${deletingItem.id}`;
+        router.delete(url, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Laporan ${deletingItem.type === 'mesin' ? 'Mesin Pakan' : 'Kolam RAS'} berhasil dihapus`);
+                setDeletingItem(null);
+                setSelectedLaporanMesin(null);
+                setSelectedLaporanRas(null);
+            },
+            onError: () => {
+                toast.error('Gagal menghapus laporan');
+            },
+            onFinish: () => {
+                setIsDeleting(false);
+            },
+        });
+    };
 
     const formatRupiah = (number: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(number);
@@ -781,6 +985,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         <th scope="col" className="px-6 py-4 text-right">Produksi (Kg)</th>
                                         <th scope="col" className="px-6 py-4">Bahan Baku</th>
                                         <th scope="col" className="px-6 py-4 text-right">Biaya / Kg</th>
+                                        {role === 'admin_provinsi' && (
+                                            <th scope="col" className="px-6 py-4 text-right">Aksi</th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -793,6 +1000,24 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             <td className="px-6 py-4">
                                                 <div className="font-semibold text-neutral-900 dark:text-white">{lm.tanggal_input}</div>
                                                 <div className="mt-1 text-xs">{lm.pokdakan?.nama_pokdakan}</div>
+                                                {lm.riwayat && lm.riwayat.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setViewingRiwayat({
+                                                                type: 'mesin',
+                                                                title: `Laporan Mesin - ${lm.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                                riwayat: lm.riwayat || []
+                                                            });
+                                                        }}
+                                                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 mt-1.5 cursor-pointer transition-colors"
+                                                        title="Klik untuk melihat riwayat perubahan"
+                                                    >
+                                                        <History className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                                        Diedit {lm.riwayat.length}x
+                                                    </button>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -811,11 +1036,42 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             <td className="px-6 py-4 text-right text-xs">
                                                 {formatRupiah(lm.biaya_produksi_per_kg)}
                                             </td>
+                                            {role === 'admin_provinsi' && (
+                                                <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                            onClick={() => handleOpenEditMesin(lm)}
+                                                            title="Edit Laporan Mesin"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                            onClick={() => setDeletingItem({
+                                                                type: 'mesin',
+                                                                id: lm.id,
+                                                                title: `Laporan Mesin Pakan - ${lm.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                                subtitle: `Tanggal input: ${lm.tanggal_input} | Produksi: ${lm.produksi_pakan_kg} Kg`
+                                                            })}
+                                                            title="Hapus Laporan Mesin"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                            Hapus
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                     {laporan_mesin.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan mesin pakan.</td>
+                                            <td colSpan={role === 'admin_provinsi' ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan mesin pakan.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -834,6 +1090,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         <th scope="col" className="px-6 py-4">Kondisi Air</th>
                                         <th scope="col" className="px-6 py-4 text-right">Hasil Panen</th>
                                         <th scope="col" className="px-6 py-4 text-right">Pendapatan</th>
+                                        {role === 'admin_provinsi' && (
+                                            <th scope="col" className="px-6 py-4 text-right">Aksi</th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -847,6 +1106,24 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 <div className="font-semibold text-neutral-900 dark:text-white">Siklus Ke-{lr.siklus_ke}</div>
                                                 <div className="mt-1 text-xs">{lr.pokdakan?.nama_pokdakan}</div>
                                                 <div className="mt-1 text-xs text-neutral-400">Tgl: {lr.tanggal_input}</div>
+                                                {lr.riwayat && lr.riwayat.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setViewingRiwayat({
+                                                                type: 'ras',
+                                                                title: `Laporan Kolam RAS - ${lr.pokdakan?.nama_pokdakan || 'Pokdakan'} (Siklus ${lr.siklus_ke})`,
+                                                                riwayat: lr.riwayat || []
+                                                            });
+                                                        }}
+                                                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 mt-1.5 cursor-pointer transition-colors"
+                                                        title="Klik untuk melihat riwayat perubahan"
+                                                    >
+                                                        <History className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                                        Diedit {lr.riwayat.length}x
+                                                    </button>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -869,11 +1146,42 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             <td className="px-6 py-4 text-right text-xs font-medium text-neutral-900 dark:text-white">
                                                 {lr.total_pendapatan ? formatRupiah(lr.total_pendapatan) : '-'}
                                             </td>
+                                            {role === 'admin_provinsi' && (
+                                                <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                            onClick={() => handleOpenEditRas(lr)}
+                                                            title="Edit Laporan RAS"
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                            onClick={() => setDeletingItem({
+                                                                type: 'ras',
+                                                                id: lr.id,
+                                                                title: `Laporan Budidaya Kolam RAS - ${lr.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                                subtitle: `Siklus Ke-${lr.siklus_ke} (${lr.komoditas_ikan}) | Tanggal: ${lr.tanggal_input}`
+                                                            })}
+                                                            title="Hapus Laporan RAS"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                            Hapus
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                     {laporan_ras.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan budidaya RAS.</td>
+                                            <td colSpan={role === 'admin_provinsi' ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan budidaya RAS.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -1084,31 +1392,95 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         </DialogDescription>
                     </DialogHeader>
                     {selectedLaporanMesin && (
-                        <div className="grid gap-4 py-4 text-sm">
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Pokdakan</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanMesin.pokdakan?.nama_pokdakan}</span>
+                        <div className="space-y-4">
+                            <div className="grid gap-3 py-2 text-sm">
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Pokdakan</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanMesin.pokdakan?.nama_pokdakan}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Status Mesin</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanMesin.status_mesin}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Produksi (Kg)</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanMesin.produksi_pakan_kg} Kg</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Bahan Baku</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanMesin.bahan_baku_utama}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Biaya / Kg</span>
+                                    <span className="col-span-2 font-medium">{formatRupiah(selectedLaporanMesin.biaya_produksi_per_kg)}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Keterangan</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanMesin.keterangan_kendala || '-'}</span>
+                                </div>
+                                {selectedLaporanMesin.riwayat && selectedLaporanMesin.riwayat.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2 pb-1 items-center">
+                                        <span className="text-neutral-500">Riwayat Edit</span>
+                                        <div className="col-span-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-medium cursor-pointer"
+                                                onClick={() => {
+                                                    const target = selectedLaporanMesin;
+                                                    setViewingRiwayat({
+                                                        type: 'mesin',
+                                                        title: `Laporan Mesin - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                        riwayat: target.riwayat || [],
+                                                    });
+                                                }}
+                                            >
+                                                <History className="h-3.5 w-3.5 mr-1 text-amber-600" />
+                                                Diedit {selectedLaporanMesin.riwayat.length} kali (Lihat Catatan)
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Status Mesin</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanMesin.status_mesin}</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Produksi (Kg)</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanMesin.produksi_pakan_kg} Kg</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Bahan Baku</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanMesin.bahan_baku_utama}</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Biaya / Kg</span>
-                                <span className="col-span-2 font-medium">{formatRupiah(selectedLaporanMesin.biaya_produksi_per_kg)}</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 pb-2">
-                                <span className="text-neutral-500">Keterangan</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanMesin.keterangan_kendala || '-'}</span>
-                            </div>
+
+                            {role === 'admin_provinsi' && (
+                                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                        onClick={() => {
+                                            const target = selectedLaporanMesin;
+                                            setSelectedLaporanMesin(null);
+                                            handleOpenEditMesin(target);
+                                        }}
+                                    >
+                                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                        Edit Laporan
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                        onClick={() => {
+                                            const target = selectedLaporanMesin;
+                                            setSelectedLaporanMesin(null);
+                                            setDeletingItem({
+                                                type: 'mesin',
+                                                id: target.id,
+                                                title: `Laporan Mesin Pakan - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                subtitle: `Tanggal input: ${target.tanggal_input} | Produksi: ${target.produksi_pakan_kg} Kg`
+                                            });
+                                        }}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                        Hapus Laporan
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </DialogContent>
@@ -1124,37 +1496,583 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         </DialogDescription>
                     </DialogHeader>
                     {selectedLaporanRas && (
-                        <div className="grid gap-4 py-4 text-sm">
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Pokdakan</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.pokdakan?.nama_pokdakan}</span>
+                        <div className="space-y-4">
+                            <div className="grid gap-3 py-2 text-sm">
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Pokdakan</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.pokdakan?.nama_pokdakan}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Status Siklus</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.status_siklus}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Komoditas & Bibit</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.komoditas_ikan} ({selectedLaporanRas.jumlah_benih_ekor} Ekor)</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Kondisi Air</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.kondisi_air}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Hasil Panen</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.total_panen_kg ? `${selectedLaporanRas.total_panen_kg} Kg` : 'Belum Panen'}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Pendapatan</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.total_pendapatan ? formatRupiah(selectedLaporanRas.total_pendapatan) : '-'}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 border-b pb-2">
+                                    <span className="text-neutral-500">Keterangan</span>
+                                    <span className="col-span-2 font-medium">{selectedLaporanRas.keterangan_kendala || '-'}</span>
+                                </div>
+                                {selectedLaporanRas.riwayat && selectedLaporanRas.riwayat.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2 pb-1 items-center">
+                                        <span className="text-neutral-500">Riwayat Edit</span>
+                                        <div className="col-span-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-medium cursor-pointer"
+                                                onClick={() => {
+                                                    const target = selectedLaporanRas;
+                                                    setViewingRiwayat({
+                                                        type: 'ras',
+                                                        title: `Laporan Kolam RAS - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'} (Siklus ${target.siklus_ke})`,
+                                                        riwayat: target.riwayat || [],
+                                                    });
+                                                }}
+                                            >
+                                                <History className="h-3.5 w-3.5 mr-1 text-amber-600" />
+                                                Diedit {selectedLaporanRas.riwayat.length} kali (Lihat Catatan)
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Status Siklus</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.status_siklus}</span>
+
+                            {role === 'admin_provinsi' && (
+                                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                        onClick={() => {
+                                            const target = selectedLaporanRas;
+                                            setSelectedLaporanRas(null);
+                                            handleOpenEditRas(target);
+                                        }}
+                                    >
+                                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                        Edit Laporan
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                        onClick={() => {
+                                            const target = selectedLaporanRas;
+                                            setSelectedLaporanRas(null);
+                                            setDeletingItem({
+                                                type: 'ras',
+                                                id: target.id,
+                                                title: `Laporan Budidaya Kolam RAS - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                subtitle: `Siklus Ke-${target.siklus_ke} (${target.komoditas_ikan}) | Tanggal: ${target.tanggal_input}`
+                                            });
+                                        }}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                        Hapus Laporan
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Edit Laporan Mesin Pakan */}
+            <Dialog open={!!editingMesin} onOpenChange={(open) => !open && setEditingMesin(null)}>
+                <DialogContent className="w-[92vw] max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                            <Pencil className="h-5 w-5 text-blue-600" />
+                            Edit Laporan Mesin Pakan
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editingMesin?.pokdakan?.nama_pokdakan} &bull; Perbarui data produksi dan operasional mesin pakan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmitEditMesin} className="space-y-4 py-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Tanggal Input</label>
+                                <Input
+                                    type="date"
+                                    required
+                                    value={editMesinForm.tanggal_input}
+                                    onChange={(e) => setEditMesinForm({ ...editMesinForm, tanggal_input: e.target.value })}
+                                />
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Komoditas & Bibit</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.komoditas_ikan} ({selectedLaporanRas.jumlah_benih_ekor} Ekor)</span>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Status Mesin</label>
+                                <Select
+                                    value={editMesinForm.status_mesin}
+                                    onValueChange={(val) => setEditMesinForm({ ...editMesinForm, status_mesin: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Baik">Baik (Beroperasi Normal)</SelectItem>
+                                        <SelectItem value="Rusak Ringan">Rusak Ringan</SelectItem>
+                                        <SelectItem value="Rusak Berat">Rusak Berat</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Kondisi Air</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.kondisi_air}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Produksi Pakan (Kg)</label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    required
+                                    value={editMesinForm.produksi_pakan_kg}
+                                    onChange={(e) => setEditMesinForm({ ...editMesinForm, produksi_pakan_kg: e.target.value })}
+                                    placeholder="Contoh: 150"
+                                />
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Hasil Panen</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.total_panen_kg ? `${selectedLaporanRas.total_panen_kg} Kg` : 'Belum Panen'}</span>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Biaya Produksi / Kg (Rp)</label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    required
+                                    value={editMesinForm.biaya_produksi_per_kg}
+                                    onChange={(e) => setEditMesinForm({ ...editMesinForm, biaya_produksi_per_kg: e.target.value })}
+                                    placeholder="Contoh: 8500"
+                                />
                             </div>
-                            <div className="grid grid-cols-3 gap-2 border-b pb-2">
-                                <span className="text-neutral-500">Pendapatan</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.total_pendapatan ? formatRupiah(selectedLaporanRas.total_pendapatan) : '-'}</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Bahan Baku Utama</label>
+                            <Input
+                                type="text"
+                                required
+                                value={editMesinForm.bahan_baku_utama}
+                                onChange={(e) => setEditMesinForm({ ...editMesinForm, bahan_baku_utama: e.target.value })}
+                                placeholder="Contoh: Dedak halus, bungkil kedelai, tepung ikan"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Keterangan / Kendala Mesin</label>
+                            <Textarea
+                                rows={2}
+                                value={editMesinForm.keterangan_kendala}
+                                onChange={(e) => setEditMesinForm({ ...editMesinForm, keterangan_kendala: e.target.value })}
+                                placeholder="Catatan kendala teknis atau operasional mesin (opsional)"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5 bg-blue-50/60 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-200/80 dark:border-blue-900/50">
+                            <label className="text-xs font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                                <History className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                Catatan / Alasan Perubahan (Audit Trail)
+                            </label>
+                            <Textarea
+                                rows={2}
+                                value={editMesinForm.catatan_perubahan}
+                                onChange={(e) => setEditMesinForm({ ...editMesinForm, catatan_perubahan: e.target.value })}
+                                placeholder="Contoh: Penyesuaian data tonase pakan berdasarkan laporan verifikasi fisik"
+                                className="bg-white dark:bg-neutral-900"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setEditingMesin(null)}
+                                disabled={isSubmittingEditMesin}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                disabled={isSubmittingEditMesin}
+                            >
+                                {isSubmittingEditMesin ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Edit Laporan Kolam RAS */}
+            <Dialog open={!!editingRas} onOpenChange={(open) => !open && setEditingRas(null)}>
+                <DialogContent className="w-[92vw] max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                            <Pencil className="h-5 w-5 text-blue-600" />
+                            Edit Laporan Budidaya Kolam RAS
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editingRas?.pokdakan?.nama_pokdakan} &bull; Perbarui data siklus operasional kolam RAS.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmitEditRas} className="space-y-4 py-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Tanggal Input</label>
+                                <Input
+                                    type="date"
+                                    required
+                                    value={editRasForm.tanggal_input}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, tanggal_input: e.target.value })}
+                                />
                             </div>
-                            <div className="grid grid-cols-3 gap-2 pb-2">
-                                <span className="text-neutral-500">Keterangan</span>
-                                <span className="col-span-2 font-medium">{selectedLaporanRas.keterangan_kendala || '-'}</span>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Siklus Ke</label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={editRasForm.siklus_ke}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, siklus_ke: parseInt(e.target.value) || 1 })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Status Siklus</label>
+                                <Select
+                                    value={editRasForm.status_siklus}
+                                    onValueChange={(val) => setEditRasForm({ ...editRasForm, status_siklus: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Berjalan">Berjalan</SelectItem>
+                                        <SelectItem value="Panen">Panen</SelectItem>
+                                        <SelectItem value="Gagal">Gagal</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Tanggal Tebar</label>
+                                <Input
+                                    type="date"
+                                    required
+                                    value={editRasForm.tanggal_tebar}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, tanggal_tebar: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Komoditas Ikan</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editRasForm.komoditas_ikan}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, komoditas_ikan: e.target.value })}
+                                    placeholder="Contoh: Ikan Nila Hitam"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Jumlah Benih (Ekor)</label>
+                                <Input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={editRasForm.jumlah_benih_ekor}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, jumlah_benih_ekor: e.target.value })}
+                                    placeholder="Contoh: 5000"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Ukuran Benih (cm)</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editRasForm.ukuran_benih_cm}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, ukuran_benih_cm: e.target.value })}
+                                    placeholder="Contoh: 5-7 cm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Kondisi Air</label>
+                                <Input
+                                    type="text"
+                                    value={editRasForm.kondisi_air}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, kondisi_air: e.target.value })}
+                                    placeholder="Contoh: Baik / pH 7.2"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Kendala Penyakit</label>
+                                <Input
+                                    type="text"
+                                    value={editRasForm.kendala_penyakit}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, kendala_penyakit: e.target.value })}
+                                    placeholder="Catatan penyakit (jika ada)"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Rincian Panen */}
+                        <div className="bg-slate-50 dark:bg-neutral-800/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-neutral-700/80 space-y-3">
+                            <div className="text-xs font-bold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
+                                <Fish className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                                Rincian Panen & Pendapatan (Diisi jika sudah / sedang panen)
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Tanggal Panen</label>
+                                    <Input
+                                        type="date"
+                                        value={editRasForm.tanggal_panen}
+                                        onChange={(e) => setEditRasForm({ ...editRasForm, tanggal_panen: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Total Panen (Kg)</label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={editRasForm.total_panen_kg}
+                                        onChange={(e) => {
+                                            const panen = parseFloat(e.target.value) || 0;
+                                            const harga = parseFloat(editRasForm.harga_jual_per_kg) || 0;
+                                            setEditRasForm({
+                                                ...editRasForm,
+                                                total_panen_kg: e.target.value,
+                                                total_pendapatan: panen > 0 && harga > 0 ? String(panen * harga) : editRasForm.total_pendapatan
+                                            });
+                                        }}
+                                        placeholder="Contoh: 850"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Harga Jual / Kg (Rp)</label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={editRasForm.harga_jual_per_kg}
+                                        onChange={(e) => {
+                                            const harga = parseFloat(e.target.value) || 0;
+                                            const panen = parseFloat(editRasForm.total_panen_kg) || 0;
+                                            setEditRasForm({
+                                                ...editRasForm,
+                                                harga_jual_per_kg: e.target.value,
+                                                total_pendapatan: panen > 0 && harga > 0 ? String(panen * harga) : editRasForm.total_pendapatan
+                                            });
+                                        }}
+                                        placeholder="Contoh: 28000"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Total Pendapatan (Rp)</label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editRasForm.total_pendapatan}
+                                    onChange={(e) => setEditRasForm({ ...editRasForm, total_pendapatan: e.target.value })}
+                                    placeholder="Total nominal pendapatan panen"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 bg-blue-50/60 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-200/80 dark:border-blue-900/50">
+                            <label className="text-xs font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                                <History className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                Catatan / Alasan Perubahan (Audit Trail)
+                            </label>
+                            <Textarea
+                                rows={2}
+                                value={editRasForm.catatan_perubahan}
+                                onChange={(e) => setEditRasForm({ ...editRasForm, catatan_perubahan: e.target.value })}
+                                placeholder="Contoh: Koreksi bobot panen dan harga jual per kg dari pembukuan pokdakan"
+                                className="bg-white dark:bg-neutral-900"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setEditingRas(null)}
+                                disabled={isSubmittingEditRas}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                disabled={isSubmittingEditRas}
+                            >
+                                {isSubmittingEditRas ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Konfirmasi Hapus Laporan */}
+            <Dialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <Trash2 className="h-5 w-5" />
+                            Konfirmasi Hapus Laporan
+                        </DialogTitle>
+                        <DialogDescription>
+                            Tindakan ini bersifat permanen dan tidak dapat dibatalkan. Data laporan beserta catatan riwayat perubahannya akan dihapus dari sistem.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {deletingItem && (
+                        <div className="space-y-3 py-2 text-sm">
+                            <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/50 space-y-1">
+                                <div className="font-semibold text-red-900 dark:text-red-200">{deletingItem.title}</div>
+                                <div className="text-xs text-red-700 dark:text-red-300">{deletingItem.subtitle}</div>
                             </div>
                         </div>
                     )}
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setDeletingItem(null)}
+                            disabled={isDeleting}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            type="button"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? 'Menghapus...' : 'Ya, Hapus Laporan'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Riwayat Perubahan Laporan (Audit Trail) */}
+            <Dialog open={!!viewingRiwayat} onOpenChange={(open) => !open && setViewingRiwayat(null)}>
+                <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] overflow-y-auto p-5 md:p-6">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-lg md:text-xl font-bold text-slate-900 dark:text-white">
+                            <History className="h-5 w-5 text-amber-600" />
+                            Riwayat Perubahan Laporan
+                        </DialogTitle>
+                        <DialogDescription className="text-xs md:text-sm text-slate-500 dark:text-neutral-400">
+                            {viewingRiwayat?.title} &bull; Catatan audit perubahan data oleh Admin Provinsi.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        {viewingRiwayat && viewingRiwayat.riwayat && viewingRiwayat.riwayat.length > 0 ? (
+                            <div className="relative border-l-2 border-slate-200 dark:border-neutral-800 ml-3.5 space-y-6">
+                                {viewingRiwayat.riwayat.map((item, idx) => (
+                                    <div key={item.id || idx} className="relative pl-6">
+                                        {/* Marker bullet */}
+                                        <div className="absolute -left-[9px] top-1.5 h-4 w-4 rounded-full bg-amber-500 border-2 border-white dark:border-neutral-900 shadow-xs" />
+                                        
+                                        <div className="bg-slate-50 dark:bg-neutral-800/80 rounded-xl p-4 border border-slate-200/70 dark:border-neutral-700/70 space-y-3">
+                                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 dark:border-neutral-700/60 pb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-sm text-slate-900 dark:text-neutral-100">
+                                                        {item.user?.name || 'Admin'}
+                                                    </span>
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                                                        {item.user?.role === 'admin_provinsi' ? 'Admin Provinsi' : (item.user?.role || 'User')}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400">
+                                                    <Clock className="h-3.5 w-3.5" />
+                                                    <span>{formatDateTime(item.created_at)}</span>
+                                                </div>
+                                            </div>
+
+                                            {item.catatan && (
+                                                <div className="text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 p-2.5 rounded-lg border border-amber-200/60 dark:border-amber-900/40">
+                                                    <strong className="block font-semibold mb-0.5">Catatan Perubahan:</strong>
+                                                    {item.catatan}
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <div className="text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-2">
+                                                    Rincian Nilai yang Diubah:
+                                                </div>
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-left text-xs">
+                                                        <thead className="bg-slate-100 dark:bg-neutral-700/50 text-slate-600 dark:text-neutral-400">
+                                                            <tr>
+                                                                <th className="px-3 py-1.5 rounded-l">Kolom Data</th>
+                                                                <th className="px-3 py-1.5">Sebelumnya</th>
+                                                                <th className="px-3 py-1.5 rounded-r">Menjadi</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100 dark:divide-neutral-700/40">
+                                                            {Object.entries(item.perubahan || {}).map(([key, val]: [string, any]) => (
+                                                                <tr key={key}>
+                                                                    <td className="px-3 py-2 font-medium text-slate-800 dark:text-neutral-200">
+                                                                        {fieldLabels[key] || key}
+                                                                    </td>
+                                                                    <td className="px-3 py-2">
+                                                                        <span className="line-through text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded text-[11px]">
+                                                                            {val?.sebelum !== null && val?.sebelum !== undefined && val?.sebelum !== '' ? String(val.sebelum) : '-'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-3 py-2">
+                                                                        <span className="font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded text-[11px]">
+                                                                            {val?.sesudah !== null && val?.sesudah !== undefined && val?.sesudah !== '' ? String(val.sesudah) : '-'}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center text-slate-500 text-sm">
+                                Belum ada riwayat perubahan pada laporan ini.
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-neutral-800">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setViewingRiwayat(null)}
+                        >
+                            Tutup
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

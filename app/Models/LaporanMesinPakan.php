@@ -28,4 +28,9 @@ class LaporanMesinPakan extends Model
     {
         return $this->belongsTo(Pokdakan::class);
     }
+
+    public function riwayat()
+    {
+        return $this->morphMany(LaporanRiwayat::class, 'riwayatable')->latest();
+    }
 }

@@ -48,11 +48,11 @@ class DashboardController extends Controller
         // For laporan, we want to fetch the ones related to the filtered Pokdakans
         $pokdakanIds = $pokdakans->pluck('id');
 
-        $laporanMesinQuery = LaporanMesinPakan::with('pokdakan')
+        $laporanMesinQuery = LaporanMesinPakan::with(['pokdakan', 'riwayat.user'])
             ->whereIn('pokdakan_id', $pokdakanIds)
             ->orderBy('tanggal_input', 'desc');
 
-        $laporanRasQuery = LaporanKolamRas::with('pokdakan')
+        $laporanRasQuery = LaporanKolamRas::with(['pokdakan', 'riwayat.user'])
             ->whereIn('pokdakan_id', $pokdakanIds)
             ->orderBy('tanggal_input', 'desc');
 
