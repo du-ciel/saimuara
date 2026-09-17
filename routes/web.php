@@ -21,11 +21,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/admin/users/{user}', [App\Http\Controllers\AdminUserController::class, 'update'])->name('admin.users.update');
     Route::put('/admin/users/{user}/password', [App\Http\Controllers\AdminUserController::class, 'updatePassword'])->name('admin.users.password');
 
-    // Manajemen Laporan (Khusus Admin Provinsi)
+    // Manajemen Laporan (Admin Provinsi & Admin Kabupaten)
     Route::put('/admin/laporan/mesin/{laporanMesin}', [App\Http\Controllers\AdminLaporanController::class, 'updateMesin'])->name('admin.laporan.mesin.update');
     Route::delete('/admin/laporan/mesin/{laporanMesin}', [App\Http\Controllers\AdminLaporanController::class, 'destroyMesin'])->name('admin.laporan.mesin.destroy');
     Route::put('/admin/laporan/ras/{laporanRas}', [App\Http\Controllers\AdminLaporanController::class, 'updateRas'])->name('admin.laporan.ras.update');
     Route::delete('/admin/laporan/ras/{laporanRas}', [App\Http\Controllers\AdminLaporanController::class, 'destroyRas'])->name('admin.laporan.ras.destroy');
+
+    // Usulan & Persetujuan Perubahan Pokdakan
+    Route::post('/pokdakan/{pokdakan}/request-update', [App\Http\Controllers\PokdakanPerubahanController::class, 'store'])->name('pokdakan.request-update');
+    Route::post('/admin/pokdakan-perubahan/{perubahan}/approve', [App\Http\Controllers\PokdakanPerubahanController::class, 'approve'])->name('admin.pokdakan-perubahan.approve');
+    Route::post('/admin/pokdakan-perubahan/{perubahan}/reject', [App\Http\Controllers\PokdakanPerubahanController::class, 'reject'])->name('admin.pokdakan-perubahan.reject');
 });
 
 require __DIR__.'/settings.php';

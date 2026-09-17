@@ -14,8 +14,33 @@ class AdminLaporanController extends Controller
     protected function authorizeAdminProvinsi(Request $request): void
     {
         if ($request->user()->role !== 'admin_provinsi') {
-            abort(403, 'Hanya Admin Provinsi yang berhak mengedit atau menghapus laporan.');
+            abort(403, 'Hanya Admin Provinsi yang berhak menghapus laporan.');
         }
+    }
+
+    /**
+     * Authorize user to edit report (Admin Provinsi or Admin Kabupaten for their district)
+     */
+    protected function authorizeEdit(Request $request, $laporan): void
+    {
+        $user = $request->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        if ($user->role === 'admin_provinsi') {
+            return;
+        }
+
+        if ($user->role === 'admin_kabupaten') {
+            $laporan->loadMissing('pokdakan');
+            if ($laporan->pokdakan && $laporan->pokdakan->kabupaten_kota === $user->kabupaten) {
+                return;
+            }
+            abort(403, 'Anda hanya dapat mengedit laporan untuk kelompok di wilayah kabupaten Anda.');
+        }
+
+        abort(403, 'Anda tidak memiliki hak akses untuk mengedit laporan ini.');
     }
 
     /**
@@ -23,7 +48,7 @@ class AdminLaporanController extends Controller
      */
     public function updateMesin(Request $request, LaporanMesinPakan $laporanMesin)
     {
-        $this->authorizeAdminProvinsi($request);
+        $this->authorizeEdit($request, $laporanMesin);
 
         $request->validate([
             'tanggal_input' => 'required|date',
@@ -106,7 +131,7 @@ class AdminLaporanController extends Controller
      */
     public function updateRas(Request $request, LaporanKolamRas $laporanRas)
     {
-        $this->authorizeAdminProvinsi($request);
+        $this->authorizeEdit($request, $laporanRas);
 
         $request->validate([
             'tanggal_input' => 'required|date',

@@ -202,7 +202,84 @@ class AdminLaporanTest extends TestCase
         ]);
     }
 
-    public function test_admin_kabupaten_cannot_update_or_delete_laporan(): void
+    public function test_admin_kabupaten_can_update_laporan_in_own_district_and_audit_history_is_recorded(): void
+    {
+        $laporanMesin = LaporanMesinPakan::create([
+            'tanggal_input' => '2026-09-01',
+            'pokdakan_id' => $this->pokdakan->id,
+            'status_mesin' => 'Baik',
+            'produksi_pakan_kg' => 50,
+            'bahan_baku_utama' => 'Dedak',
+            'biaya_produksi_per_kg' => 7500,
+            'keterangan_kendala' => 'Lancar',
+        ]);
+
+        $this->actingAs($this->adminKabupaten);
+
+        $response = $this->put(route('admin.laporan.mesin.update', $laporanMesin), [
+            'tanggal_input' => '2026-09-02',
+            'status_mesin' => 'Rusak Ringan',
+            'produksi_pakan_kg' => 60,
+            'bahan_baku_utama' => 'Dedak, Jagung',
+            'biaya_produksi_per_kg' => 8000,
+            'keterangan_kendala' => 'Perlu ganti oli',
+            'catatan_perubahan' => 'Koreksi teknis oleh admin kabupaten',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $laporanMesin->refresh();
+        $this->assertEquals('Rusak Ringan', $laporanMesin->status_mesin);
+        $this->assertEquals(60, (float) $laporanMesin->produksi_pakan_kg);
+
+        $this->assertDatabaseHas('laporan_riwayats', [
+            'riwayatable_type' => LaporanMesinPakan::class,
+            'riwayatable_id' => $laporanMesin->id,
+            'user_id' => $this->adminKabupaten->id,
+            'action' => 'edit',
+            'catatan' => 'Koreksi teknis oleh admin kabupaten',
+        ]);
+    }
+
+    public function test_admin_kabupaten_cannot_update_laporan_in_other_district(): void
+    {
+        $otherPokdakan = Pokdakan::create([
+            'user_id' => $this->adminProvinsi->id,
+            'nama_pokdakan' => 'Pokdakan Lampung Selatan',
+            'nama_ketua' => 'Ahmad',
+            'no_whatsapp' => '08111111111',
+            'pekon_desa' => 'Desa Bakauheni',
+            'kecamatan' => 'Bakauheni',
+            'kabupaten_kota' => 'Lampung Selatan',
+            'tahun_anggaran' => 2024,
+            'jumlah_mesin_pakan' => 1,
+            'jumlah_kolam_ras' => 2,
+        ]);
+
+        $laporanMesinOther = LaporanMesinPakan::create([
+            'tanggal_input' => '2026-09-01',
+            'pokdakan_id' => $otherPokdakan->id,
+            'status_mesin' => 'Baik',
+            'produksi_pakan_kg' => 50,
+            'bahan_baku_utama' => 'Dedak',
+            'biaya_produksi_per_kg' => 7500,
+        ]);
+
+        $this->actingAs($this->adminKabupaten);
+
+        $response = $this->put(route('admin.laporan.mesin.update', $laporanMesinOther), [
+            'tanggal_input' => '2026-09-02',
+            'status_mesin' => 'Rusak',
+            'produksi_pakan_kg' => 100,
+            'bahan_baku_utama' => 'Dedak',
+            'biaya_produksi_per_kg' => 7500,
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_admin_kabupaten_cannot_delete_laporan(): void
     {
         $laporanMesin = LaporanMesinPakan::create([
             'tanggal_input' => '2026-09-01',
@@ -215,18 +292,11 @@ class AdminLaporanTest extends TestCase
 
         $this->actingAs($this->adminKabupaten);
 
-        // Attempt to update
-        $updateResponse = $this->put(route('admin.laporan.mesin.update', $laporanMesin), [
-            'tanggal_input' => '2026-09-01',
-            'status_mesin' => 'Rusak',
-            'produksi_pakan_kg' => 100,
-            'bahan_baku_utama' => 'Dedak',
-            'biaya_produksi_per_kg' => 7500,
-        ]);
-        $updateResponse->assertForbidden();
+        $response = $this->delete(route('admin.laporan.mesin.destroy', $laporanMesin));
+        $response->assertForbidden();
 
-        // Attempt to delete
-        $deleteResponse = $this->delete(route('admin.laporan.mesin.destroy', $laporanMesin));
-        $deleteResponse->assertForbidden();
+        $this->assertDatabaseHas('laporan_mesin_pakans', [
+            'id' => $laporanMesin->id,
+        ]);
     }
 }

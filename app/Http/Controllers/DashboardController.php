@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pokdakan;
+use App\Models\PokdakanPerubahan;
 use App\Models\LaporanMesinPakan;
 use App\Models\LaporanKolamRas;
 use Illuminate\Support\Facades\Schema;
@@ -19,8 +20,14 @@ class DashboardController extends Controller
         $kabupaten = $request->input('kabupaten');
         $periode = $request->input('periode', 'semua');
 
+        $hasPokdakanPerubahan = Schema::hasTable('pokdakan_perubahans');
+        $pokdakanRelations = ['laporanMesinPakan', 'laporanKolamRas', 'user'];
+        if ($hasPokdakanPerubahan) {
+            $pokdakanRelations[] = 'pendingPerubahan.user';
+        }
+
         // Base query for Pokdakan based on role
-        $pokdakanQuery = Pokdakan::with(['laporanMesinPakan', 'laporanKolamRas', 'user']);
+        $pokdakanQuery = Pokdakan::with($pokdakanRelations);
 
         // Role restriction
         if ($user->role !== 'admin_provinsi') {
@@ -232,11 +239,24 @@ class DashboardController extends Controller
             }
         }
 
+        // Pending Pokdakan update requests
+        $pendingPokdakans = collect();
+        if ($hasPokdakanPerubahan) {
+            $pendingQuery = PokdakanPerubahan::with(['pokdakan', 'user'])->where('status', 'pending')->latest();
+            if ($user->role !== 'admin_provinsi') {
+                $pendingQuery->whereHas('pokdakan', function ($q) use ($user) {
+                    $q->where('kabupaten_kota', $user->kabupaten);
+                });
+            }
+            $pendingPokdakans = $pendingQuery->get();
+        }
+
         return Inertia::render('dashboard', [
             'summary' => $summary,
             'pokdakans' => $pokdakans,
             'laporan_mesin' => $laporanMesin,
             'laporan_ras' => $laporanRas,
+            'pending_pokdakan_requests' => $pendingPokdakans,
             'chartData' => $chartData,
             'mapData' => $mapData,
             'role' => $user->role,

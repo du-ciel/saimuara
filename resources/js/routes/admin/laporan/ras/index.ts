@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\AdminLaporanController::update
- * @see app/Http/Controllers/AdminLaporanController.php:107
+ * @see app/Http/Controllers/AdminLaporanController.php:132
  * @route '/admin/laporan/ras/{laporanRas}'
  */
 export const update = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -16,7 +16,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\AdminLaporanController::update
- * @see app/Http/Controllers/AdminLaporanController.php:107
+ * @see app/Http/Controllers/AdminLaporanController.php:132
  * @route '/admin/laporan/ras/{laporanRas}'
  */
 update.url = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -49,7 +49,7 @@ update.url = (args: { laporanRas: number | { id: number } } | [laporanRas: numbe
 
 /**
 * @see \App\Http\Controllers\AdminLaporanController::update
- * @see app/Http/Controllers/AdminLaporanController.php:107
+ * @see app/Http/Controllers/AdminLaporanController.php:132
  * @route '/admin/laporan/ras/{laporanRas}'
  */
 update.put = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'put'> => ({
@@ -59,7 +59,7 @@ update.put = (args: { laporanRas: number | { id: number } } | [laporanRas: numbe
 
     /**
 * @see \App\Http\Controllers\AdminLaporanController::update
- * @see app/Http/Controllers/AdminLaporanController.php:107
+ * @see app/Http/Controllers/AdminLaporanController.php:132
  * @route '/admin/laporan/ras/{laporanRas}'
  */
     const updateForm = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -74,7 +74,7 @@ update.put = (args: { laporanRas: number | { id: number } } | [laporanRas: numbe
 
             /**
 * @see \App\Http\Controllers\AdminLaporanController::update
- * @see app/Http/Controllers/AdminLaporanController.php:107
+ * @see app/Http/Controllers/AdminLaporanController.php:132
  * @route '/admin/laporan/ras/{laporanRas}'
  */
         updateForm.put = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -90,7 +90,7 @@ update.put = (args: { laporanRas: number | { id: number } } | [laporanRas: numbe
     update.form = updateForm
 /**
 * @see \App\Http\Controllers\AdminLaporanController::destroy
- * @see app/Http/Controllers/AdminLaporanController.php:204
+ * @see app/Http/Controllers/AdminLaporanController.php:229
  * @route '/admin/laporan/ras/{laporanRas}'
  */
 export const destroy = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -105,7 +105,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\AdminLaporanController::destroy
- * @see app/Http/Controllers/AdminLaporanController.php:204
+ * @see app/Http/Controllers/AdminLaporanController.php:229
  * @route '/admin/laporan/ras/{laporanRas}'
  */
 destroy.url = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -138,7 +138,7 @@ destroy.url = (args: { laporanRas: number | { id: number } } | [laporanRas: numb
 
 /**
 * @see \App\Http\Controllers\AdminLaporanController::destroy
- * @see app/Http/Controllers/AdminLaporanController.php:204
+ * @see app/Http/Controllers/AdminLaporanController.php:229
  * @route '/admin/laporan/ras/{laporanRas}'
  */
 destroy.delete = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -148,7 +148,7 @@ destroy.delete = (args: { laporanRas: number | { id: number } } | [laporanRas: n
 
     /**
 * @see \App\Http\Controllers\AdminLaporanController::destroy
- * @see app/Http/Controllers/AdminLaporanController.php:204
+ * @see app/Http/Controllers/AdminLaporanController.php:229
  * @route '/admin/laporan/ras/{laporanRas}'
  */
     const destroyForm = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -163,7 +163,7 @@ destroy.delete = (args: { laporanRas: number | { id: number } } | [laporanRas: n
 
             /**
 * @see \App\Http\Controllers\AdminLaporanController::destroy
- * @see app/Http/Controllers/AdminLaporanController.php:204
+ * @see app/Http/Controllers/AdminLaporanController.php:229
  * @route '/admin/laporan/ras/{laporanRas}'
  */
         destroyForm.delete = (args: { laporanRas: number | { id: number } } | [laporanRas: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -30,6 +30,29 @@ import {
 } from 'recharts';
 import InteractiveMap, { DaerahMapItem } from '@/components/interactive-map';
 
+interface PokdakanPerubahanItem {
+    id: number;
+    pokdakan_id: number;
+    user_id: number;
+    status: 'pending' | 'approved' | 'rejected';
+    data_lama: Record<string, any>;
+    data_baru: Record<string, any>;
+    perubahan: Record<string, { sebelum: any; sesudah: any }>;
+    alasan?: string | null;
+    catatan_review?: string | null;
+    reviewed_by?: number | null;
+    reviewed_at?: string | null;
+    created_at: string;
+    pokdakan?: Pokdakan;
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        kabupaten?: string;
+        role?: string;
+    };
+}
+
 interface Pokdakan {
     id: number;
     nama_pokdakan: string;
@@ -41,10 +64,12 @@ interface Pokdakan {
     no_badan_hukum_sk: string;
     latitude: string | number | null;
     longitude: string | number | null;
+    tahun_anggaran?: number;
     jumlah_mesin_pakan: number;
     spesifikasi_mesin: string;
     jumlah_kolam_ras: number;
     spesifikasi_kolam: string;
+    pending_perubahan?: PokdakanPerubahanItem | null;
     [key: string]: any;
 }
 
@@ -120,6 +145,7 @@ interface Props {
     pokdakans: Pokdakan[];
     laporan_mesin: LaporanMesin[];
     laporan_ras: LaporanRas[];
+    pending_pokdakan_requests?: PokdakanPerubahanItem[];
     chartData: any[];
     mapData: DaerahMapItem[];
     role: string;
@@ -128,7 +154,7 @@ interface Props {
     list_kabupaten: string[];
 }
 
-export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_ras, chartData, mapData, role, user_kabupaten, filters, list_kabupaten }: Props) {
+export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_ras, chartData, mapData, role, user_kabupaten, filters, list_kabupaten, pending_pokdakan_requests = [] }: Props) {
     const [activeTab, setActiveTab] = useState<'pokdakan' | 'mesin' | 'ras'>('pokdakan');
     const [viewMode, setViewMode] = useState<'map' | 'chart'>('map');
     const [pokdakanViewMode, setPokdakanViewMode] = useState<'card' | 'table'>('card');
@@ -143,6 +169,32 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
     const [isPokdakanListModalOpen, setIsPokdakanListModalOpen] = useState(false);
     const [selectedLaporanMesin, setSelectedLaporanMesin] = useState<LaporanMesin | null>(null);
     const [selectedLaporanRas, setSelectedLaporanRas] = useState<LaporanRas | null>(null);
+
+    // Pokdakan Edit Modal States
+    const [editingPokdakan, setEditingPokdakan] = useState<Pokdakan | null>(null);
+    const [editPokdakanForm, setEditPokdakanForm] = useState({
+        nama_pokdakan: '',
+        nama_ketua: '',
+        no_whatsapp: '',
+        pekon_desa: '',
+        kecamatan: '',
+        no_badan_hukum_sk: '',
+        tahun_anggaran: 2024,
+        jumlah_mesin_pakan: 0,
+        spesifikasi_mesin: '',
+        jumlah_kolam_ras: 0,
+        spesifikasi_kolam: '',
+        latitude: '',
+        longitude: '',
+        alasan: '',
+    });
+    const [isSubmittingEditPokdakan, setIsSubmittingEditPokdakan] = useState(false);
+
+    // Pokdakan Approval Modal States
+    const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+    const [reviewingItem, setReviewingItem] = useState<PokdakanPerubahanItem | null>(null);
+    const [reviewCatatan, setReviewCatatan] = useState('');
+    const [isProcessingApproval, setIsProcessingApproval] = useState(false);
 
     // Admin Edit, Delete & Riwayat States
     const [editingMesin, setEditingMesin] = useState<LaporanMesin | null>(null);
@@ -222,6 +274,104 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
         total_panen_kg: 'Total Panen (Kg)',
         harga_jual_per_kg: 'Harga Jual / Kg',
         total_pendapatan: 'Total Pendapatan',
+        nama_pokdakan: 'Nama Kelompok (Pokdakan)',
+        nama_ketua: 'Nama Ketua',
+        no_whatsapp: 'No. WhatsApp',
+        pekon_desa: 'Pekon / Desa',
+        kecamatan: 'Kecamatan',
+        kabupaten_kota: 'Kabupaten / Kota',
+        no_badan_hukum_sk: 'No. SK / Badan Hukum',
+        tahun_anggaran: 'Tahun Anggaran',
+        jumlah_mesin_pakan: 'Jumlah Mesin Pakan',
+        spesifikasi_mesin: 'Spesifikasi Mesin',
+        jumlah_kolam_ras: 'Jumlah Kolam RAS',
+        spesifikasi_kolam: 'Spesifikasi Kolam',
+        latitude: 'Latitude',
+        longitude: 'Longitude',
+    };
+
+    const handleOpenEditPokdakan = (p: Pokdakan) => {
+        setEditingPokdakan(p);
+        setEditPokdakanForm({
+            nama_pokdakan: p.nama_pokdakan || '',
+            nama_ketua: p.nama_ketua || '',
+            no_whatsapp: p.no_whatsapp || '',
+            pekon_desa: p.pekon_desa || '',
+            kecamatan: p.kecamatan || '',
+            no_badan_hukum_sk: p.no_badan_hukum_sk || '',
+            tahun_anggaran: p.tahun_anggaran || 2024,
+            jumlah_mesin_pakan: p.jumlah_mesin_pakan ?? 0,
+            spesifikasi_mesin: p.spesifikasi_mesin || '',
+            jumlah_kolam_ras: p.jumlah_kolam_ras ?? 0,
+            spesifikasi_kolam: p.spesifikasi_kolam || '',
+            latitude: p.latitude !== null && p.latitude !== undefined ? String(p.latitude) : '',
+            longitude: p.longitude !== null && p.longitude !== undefined ? String(p.longitude) : '',
+            alasan: '',
+        });
+    };
+
+    const handleSubmitEditPokdakan = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingPokdakan) return;
+
+        setIsSubmittingEditPokdakan(true);
+        router.post(`/pokdakan/${editingPokdakan.id}/request-update`, editPokdakanForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Usulan perubahan Pokdakan berhasil dikirim. Menunggu konfirmasi Admin Provinsi.');
+                setEditingPokdakan(null);
+                setSelectedPokdakan(null);
+            },
+            onError: (errors) => {
+                const firstErr = Object.values(errors)[0];
+                toast.error(typeof firstErr === 'string' ? firstErr : 'Gagal mengirim usulan perubahan Pokdakan');
+            },
+            onFinish: () => {
+                setIsSubmittingEditPokdakan(false);
+            },
+        });
+    };
+
+    const handleApprovePokdakan = (item: PokdakanPerubahanItem) => {
+        setIsProcessingApproval(true);
+        router.post(`/admin/pokdakan-perubahan/${item.id}/approve`, {
+            catatan_review: reviewCatatan || 'Disetujui oleh Admin Provinsi.',
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Usulan perubahan Pokdakan berhasil disetujui!');
+                setReviewingItem(null);
+                setReviewCatatan('');
+            },
+            onError: (errors) => {
+                const firstErr = Object.values(errors)[0];
+                toast.error(typeof firstErr === 'string' ? firstErr : 'Gagal menyetujui usulan perubahan.');
+            },
+            onFinish: () => {
+                setIsProcessingApproval(false);
+            },
+        });
+    };
+
+    const handleRejectPokdakan = (item: PokdakanPerubahanItem) => {
+        setIsProcessingApproval(true);
+        router.post(`/admin/pokdakan-perubahan/${item.id}/reject`, {
+            catatan_review: reviewCatatan || 'Ditolak oleh Admin Provinsi.',
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Usulan perubahan Pokdakan telah ditolak.');
+                setReviewingItem(null);
+                setReviewCatatan('');
+            },
+            onError: (errors) => {
+                const firstErr = Object.values(errors)[0];
+                toast.error(typeof firstErr === 'string' ? firstErr : 'Gagal menolak usulan perubahan.');
+            },
+            onFinish: () => {
+                setIsProcessingApproval(false);
+            },
+        });
     };
 
     const handleOpenEditMesin = (lm: LaporanMesin) => {
@@ -404,6 +554,40 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 ? 'Memantau data program pakan mandiri dan kolam RAS dari seluruh Kabupaten di Provinsi Lampung.' 
                                 : `Memantau data program khusus untuk Kabupaten ${user_kabupaten}.`}
                         </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {role === 'admin_provinsi' && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsApprovalModalOpen(true)}
+                                className={`relative h-10 px-4 text-xs font-semibold rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
+                                    (pending_pokdakan_requests && pending_pokdakan_requests.length > 0)
+                                        ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-500/25 shadow-xs'
+                                        : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50'
+                                }`}
+                            >
+                                <CheckCircle2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                <span>Persetujuan Pokdakan</span>
+                                {pending_pokdakan_requests && pending_pokdakan_requests.length > 0 && (
+                                    <span className="ml-1 px-2 py-0.5 text-[11px] font-bold bg-amber-600 text-white rounded-full animate-pulse">
+                                        {pending_pokdakan_requests.length}
+                                    </span>
+                                )}
+                            </Button>
+                        )}
+                        {role === 'admin_kabupaten' && pending_pokdakan_requests && pending_pokdakan_requests.length > 0 && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsApprovalModalOpen(true)}
+                                className="h-10 px-4 text-xs font-semibold rounded-xl flex items-center gap-2 bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-500/25 shadow-xs cursor-pointer"
+                            >
+                                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                <span>Usulan Menunggu ({pending_pokdakan_requests.length})</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -833,6 +1017,13 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                     </span>
                                                 </div>
 
+                                                {p.pending_perubahan && (
+                                                    <div className="mb-2.5 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 text-[11px] font-medium">
+                                                        <Clock className="h-3 w-3 animate-pulse text-amber-600 dark:text-amber-400 shrink-0" />
+                                                        <span className="truncate">Usulan Perubahan Menunggu Konfirmasi</span>
+                                                    </div>
+                                                )}
+
                                                 {/* Kontak & Lokasi */}
                                                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-neutral-300 mb-3 bg-slate-50/80 dark:bg-neutral-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-neutral-800/60">
                                                     <div className="flex items-center justify-between">
@@ -892,15 +1083,28 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             </div>
 
                                             {/* Action Button */}
-                                            <div className="pt-2 border-t border-slate-100 dark:border-neutral-800">
+                                            <div className="pt-2 border-t border-slate-100 dark:border-neutral-800 flex items-center gap-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="w-full text-xs h-8 bg-slate-50 dark:bg-neutral-800/80 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-400 border-slate-200 dark:border-neutral-700"
+                                                    className="flex-1 text-xs h-8 bg-slate-50 dark:bg-neutral-800/80 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-400 border-slate-200 dark:border-neutral-700"
                                                     onClick={() => setSelectedPokdakan(p)}
                                                 >
-                                                    Detail Profil Lengkap
+                                                    Detail Profil
                                                 </Button>
+                                                {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && p.kabupaten_kota === user_kabupaten)) && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={!!p.pending_perubahan}
+                                                        className="text-xs h-8 px-2.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/60 dark:border-neutral-700 font-medium cursor-pointer disabled:opacity-50"
+                                                        onClick={() => handleOpenEditPokdakan(p)}
+                                                        title={p.pending_perubahan ? 'Usulan perubahan sedang ditinjau Admin Provinsi' : 'Edit Profil Pokdakan'}
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                        {p.pending_perubahan ? 'Ditinjau' : 'Edit'}
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -922,6 +1126,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 <th scope="col" className="px-6 py-4">Wilayah</th>
                                                 <th scope="col" className="px-6 py-4 text-center">Bantuan Mesin</th>
                                                 <th scope="col" className="px-6 py-4 text-center">Bantuan RAS</th>
+                                                {(role === 'admin_provinsi' || role === 'admin_kabupaten') && (
+                                                    <th scope="col" className="px-6 py-4 text-right">Aksi</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -960,11 +1167,34 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                     <td className="px-6 py-4 text-center font-semibold text-cyan-600">
                                                         {p.jumlah_kolam_ras} Unit
                                                     </td>
+                                                    {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && p.kabupaten_kota === user_kabupaten)) && (
+                                                        <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                {p.pending_perubahan ? (
+                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded-md dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800" title="Usulan perubahan sedang ditinjau Admin Provinsi">
+                                                                        <Clock className="h-3 w-3 animate-pulse text-amber-600 dark:text-amber-400" />
+                                                                        Menunggu Review
+                                                                    </span>
+                                                                ) : (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                                        onClick={() => handleOpenEditPokdakan(p)}
+                                                                        title="Edit Profil Pokdakan"
+                                                                    >
+                                                                        <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                                        Edit
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
                                             {pokdakans.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-8 text-center text-neutral-500">Belum ada data profil penerima bantuan.</td>
+                                                    <td colSpan={(role === 'admin_provinsi' || role === 'admin_kabupaten') ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada data profil penerima bantuan.</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -985,7 +1215,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         <th scope="col" className="px-6 py-4 text-right">Produksi (Kg)</th>
                                         <th scope="col" className="px-6 py-4">Bahan Baku</th>
                                         <th scope="col" className="px-6 py-4 text-right">Biaya / Kg</th>
-                                        {role === 'admin_provinsi' && (
+                                        {(role === 'admin_provinsi' || role === 'admin_kabupaten') && (
                                             <th scope="col" className="px-6 py-4 text-right">Aksi</th>
                                         )}
                                     </tr>
@@ -1036,7 +1266,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             <td className="px-6 py-4 text-right text-xs">
                                                 {formatRupiah(lm.biaya_produksi_per_kg)}
                                             </td>
-                                            {role === 'admin_provinsi' && (
+                                            {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && lm.pokdakan?.kabupaten_kota === user_kabupaten)) && (
                                                 <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <Button
@@ -1049,21 +1279,23 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                             <Pencil className="h-3.5 w-3.5 mr-1" />
                                                             Edit
                                                         </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
-                                                            onClick={() => setDeletingItem({
-                                                                type: 'mesin',
-                                                                id: lm.id,
-                                                                title: `Laporan Mesin Pakan - ${lm.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                                subtitle: `Tanggal input: ${lm.tanggal_input} | Produksi: ${lm.produksi_pakan_kg} Kg`
-                                                            })}
-                                                            title="Hapus Laporan Mesin"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                                            Hapus
-                                                        </Button>
+                                                        {role === 'admin_provinsi' && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                                onClick={() => setDeletingItem({
+                                                                    type: 'mesin',
+                                                                    id: lm.id,
+                                                                    title: `Laporan Mesin Pakan - ${lm.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                                    subtitle: `Tanggal input: ${lm.tanggal_input} | Produksi: ${lm.produksi_pakan_kg} Kg`
+                                                                })}
+                                                                title="Hapus Laporan Mesin"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                                Hapus
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             )}
@@ -1071,7 +1303,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                     ))}
                                     {laporan_mesin.length === 0 && (
                                         <tr>
-                                            <td colSpan={role === 'admin_provinsi' ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan mesin pakan.</td>
+                                            <td colSpan={(role === 'admin_provinsi' || role === 'admin_kabupaten') ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan mesin pakan.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -1090,7 +1322,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         <th scope="col" className="px-6 py-4">Kondisi Air</th>
                                         <th scope="col" className="px-6 py-4 text-right">Hasil Panen</th>
                                         <th scope="col" className="px-6 py-4 text-right">Pendapatan</th>
-                                        {role === 'admin_provinsi' && (
+                                        {(role === 'admin_provinsi' || role === 'admin_kabupaten') && (
                                             <th scope="col" className="px-6 py-4 text-right">Aksi</th>
                                         )}
                                     </tr>
@@ -1146,7 +1378,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             <td className="px-6 py-4 text-right text-xs font-medium text-neutral-900 dark:text-white">
                                                 {lr.total_pendapatan ? formatRupiah(lr.total_pendapatan) : '-'}
                                             </td>
-                                            {role === 'admin_provinsi' && (
+                                            {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && lr.pokdakan?.kabupaten_kota === user_kabupaten)) && (
                                                 <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         <Button
@@ -1159,21 +1391,23 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                             <Pencil className="h-3.5 w-3.5 mr-1" />
                                                             Edit
                                                         </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
-                                                            onClick={() => setDeletingItem({
-                                                                type: 'ras',
-                                                                id: lr.id,
-                                                                title: `Laporan Budidaya Kolam RAS - ${lr.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                                subtitle: `Siklus Ke-${lr.siklus_ke} (${lr.komoditas_ikan}) | Tanggal: ${lr.tanggal_input}`
-                                                            })}
-                                                            title="Hapus Laporan RAS"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                                            Hapus
-                                                        </Button>
+                                                        {role === 'admin_provinsi' && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                                onClick={() => setDeletingItem({
+                                                                    type: 'ras',
+                                                                    id: lr.id,
+                                                                    title: `Laporan Budidaya Kolam RAS - ${lr.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                                    subtitle: `Siklus Ke-${lr.siklus_ke} (${lr.komoditas_ikan}) | Tanggal: ${lr.tanggal_input}`
+                                                                })}
+                                                                title="Hapus Laporan RAS"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                                Hapus
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             )}
@@ -1181,7 +1415,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                     ))}
                                     {laporan_ras.length === 0 && (
                                         <tr>
-                                            <td colSpan={role === 'admin_provinsi' ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan budidaya RAS.</td>
+                                            <td colSpan={(role === 'admin_provinsi' || role === 'admin_kabupaten') ? 6 : 5} className="px-6 py-8 text-center text-neutral-500">Belum ada laporan budidaya RAS.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -1353,6 +1587,19 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                     </DialogHeader>
                     {selectedPokdakan && (
                         <div className="grid gap-4 py-4 text-sm">
+                            {selectedPokdakan.pending_perubahan && (
+                                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <span className="font-semibold">Kelompok ini memiliki usulan perubahan data yang sedang menunggu konfirmasi Admin Provinsi.</span>
+                                        {selectedPokdakan.pending_perubahan.alasan && (
+                                            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                                                Alasan: &ldquo;{selectedPokdakan.pending_perubahan.alasan}&rdquo;
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-3 gap-2 border-b pb-2">
                                 <span className="text-neutral-500">Nama Kelompok</span>
                                 <span className="col-span-2 font-medium">{selectedPokdakan.nama_pokdakan}</span>
@@ -1377,6 +1624,26 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 <span className="text-neutral-500">Bantuan RAS</span>
                                 <span className="col-span-2 font-medium text-cyan-600">{selectedPokdakan.jumlah_kolam_ras} Unit - {selectedPokdakan.spesifikasi_kolam}</span>
                             </div>
+
+                            {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && selectedPokdakan.kabupaten_kota === user_kabupaten)) && (
+                                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={!!selectedPokdakan.pending_perubahan}
+                                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer disabled:opacity-50"
+                                        onClick={() => {
+                                            const target = selectedPokdakan;
+                                            setSelectedPokdakan(null);
+                                            handleOpenEditPokdakan(target);
+                                        }}
+                                    >
+                                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                        {selectedPokdakan.pending_perubahan ? 'Usulan Sedang Ditinjau' : 'Edit Profil Kelompok'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </DialogContent>
@@ -1444,7 +1711,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 )}
                             </div>
 
-                            {role === 'admin_provinsi' && (
+                            {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && selectedLaporanMesin.pokdakan?.kabupaten_kota === user_kabupaten)) && (
                                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
                                     <Button
                                         type="button"
@@ -1460,25 +1727,27 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         <Pencil className="h-3.5 w-3.5 mr-1.5" />
                                         Edit Laporan
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
-                                        onClick={() => {
-                                            const target = selectedLaporanMesin;
-                                            setSelectedLaporanMesin(null);
-                                            setDeletingItem({
-                                                type: 'mesin',
-                                                id: target.id,
-                                                title: `Laporan Mesin Pakan - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                subtitle: `Tanggal input: ${target.tanggal_input} | Produksi: ${target.produksi_pakan_kg} Kg`
-                                            });
-                                        }}
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                        Hapus Laporan
-                                    </Button>
+                                    {role === 'admin_provinsi' && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                            onClick={() => {
+                                                const target = selectedLaporanMesin;
+                                                setSelectedLaporanMesin(null);
+                                                setDeletingItem({
+                                                    type: 'mesin',
+                                                    id: target.id,
+                                                    title: `Laporan Mesin Pakan - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                    subtitle: `Tanggal input: ${target.tanggal_input} | Produksi: ${target.produksi_pakan_kg} Kg`
+                                                });
+                                            }}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                            Hapus Laporan
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1552,7 +1821,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 )}
                             </div>
 
-                            {role === 'admin_provinsi' && (
+                            {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && selectedLaporanRas.pokdakan?.kabupaten_kota === user_kabupaten)) && (
                                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
                                     <Button
                                         type="button"
@@ -1568,25 +1837,27 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         <Pencil className="h-3.5 w-3.5 mr-1.5" />
                                         Edit Laporan
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
-                                        onClick={() => {
-                                            const target = selectedLaporanRas;
-                                            setSelectedLaporanRas(null);
-                                            setDeletingItem({
-                                                type: 'ras',
-                                                id: target.id,
-                                                title: `Laporan Budidaya Kolam RAS - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                subtitle: `Siklus Ke-${target.siklus_ke} (${target.komoditas_ikan}) | Tanggal: ${target.tanggal_input}`
-                                            });
-                                        }}
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                        Hapus Laporan
-                                    </Button>
+                                    {role === 'admin_provinsi' && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                            onClick={() => {
+                                                const target = selectedLaporanRas;
+                                                setSelectedLaporanRas(null);
+                                                setDeletingItem({
+                                                    type: 'ras',
+                                                    id: target.id,
+                                                    title: `Laporan Budidaya Kolam RAS - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
+                                                    subtitle: `Siklus Ke-${target.siklus_ke} (${target.komoditas_ikan}) | Tanggal: ${target.tanggal_input}`
+                                                });
+                                            }}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                            Hapus Laporan
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -2069,6 +2340,417 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             variant="secondary"
                             size="sm"
                             onClick={() => setViewingRiwayat(null)}
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Edit Profil Pokdakan (Usulan Perubahan) */}
+            <Dialog open={!!editingPokdakan} onOpenChange={() => setEditingPokdakan(null)}>
+                <DialogContent className="w-[92vw] !max-w-2xl max-h-[88vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                            <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            Usulkan Perubahan Profil Pokdakan
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editingPokdakan?.nama_pokdakan} &bull; {editingPokdakan?.kabupaten_kota}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 p-3 text-xs text-blue-800 dark:text-blue-300 flex items-start gap-2 mb-1">
+                        <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                        <div>
+                            <span className="font-semibold">Konfirmasi Admin Provinsi Diperlukan:</span>
+                            <p className="mt-0.5 text-[11px] text-blue-700 dark:text-blue-300">
+                                Setiap pengajuan perubahan data profil kelompok pembudidaya akan masuk ke antrean peninjauan dan harus disetujui oleh Admin Provinsi sebelum data resmi diperbarui di sistem.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmitEditPokdakan} className="space-y-4 py-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Nama Kelompok (Pokdakan) *</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editPokdakanForm.nama_pokdakan}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, nama_pokdakan: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Nama Ketua *</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editPokdakanForm.nama_ketua}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, nama_ketua: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">No. WhatsApp Ketua *</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editPokdakanForm.no_whatsapp}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, no_whatsapp: e.target.value })}
+                                    placeholder="Contoh: 081234567890"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">No. SK / Badan Hukum</label>
+                                <Input
+                                    type="text"
+                                    value={editPokdakanForm.no_badan_hukum_sk}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, no_badan_hukum_sk: e.target.value })}
+                                    placeholder="Nomor SK Kemenkumham / Dinas"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Pekon / Desa *</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editPokdakanForm.pekon_desa}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, pekon_desa: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Kecamatan *</label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={editPokdakanForm.kecamatan}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, kecamatan: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Tahun Anggaran *</label>
+                                <Input
+                                    type="number"
+                                    required
+                                    min="2020"
+                                    max="2030"
+                                    value={editPokdakanForm.tahun_anggaran}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, tahun_anggaran: parseInt(e.target.value) || 2024 })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1">
+                                    <Cog className="h-3.5 w-3.5 text-amber-600" />
+                                    Jumlah Mesin Pakan (Unit) *
+                                </label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    required
+                                    value={editPokdakanForm.jumlah_mesin_pakan}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, jumlah_mesin_pakan: parseInt(e.target.value) || 0 })}
+                                    className="bg-white dark:bg-neutral-900"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-amber-900 dark:text-amber-200">Spesifikasi Mesin Pakan</label>
+                                <Input
+                                    type="text"
+                                    value={editPokdakanForm.spesifikasi_mesin}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, spesifikasi_mesin: e.target.value })}
+                                    placeholder="Contoh: Kapasitas 100 kg/jam, Motor 7.5 HP"
+                                    className="bg-white dark:bg-neutral-900"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200/60 dark:border-cyan-900/40">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-cyan-900 dark:text-cyan-200 flex items-center gap-1">
+                                    <Waves className="h-3.5 w-3.5 text-cyan-600" />
+                                    Jumlah Kolam RAS (Unit) *
+                                </label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    required
+                                    value={editPokdakanForm.jumlah_kolam_ras}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, jumlah_kolam_ras: parseInt(e.target.value) || 0 })}
+                                    className="bg-white dark:bg-neutral-900"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-cyan-900 dark:text-cyan-200">Spesifikasi Kolam RAS</label>
+                                <Input
+                                    type="text"
+                                    value={editPokdakanForm.spesifikasi_kolam}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, spesifikasi_kolam: e.target.value })}
+                                    placeholder="Contoh: Diameter 3m D-3 Terpal Bundar Bioflok"
+                                    className="bg-white dark:bg-neutral-900"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Latitude (Koordinat)</label>
+                                <Input
+                                    type="text"
+                                    value={editPokdakanForm.latitude}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, latitude: e.target.value })}
+                                    placeholder="Contoh: -5.4297"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Longitude (Koordinat)</label>
+                                <Input
+                                    type="text"
+                                    value={editPokdakanForm.longitude}
+                                    onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, longitude: e.target.value })}
+                                    placeholder="Contoh: 105.2625"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 bg-slate-50 dark:bg-neutral-800/60 p-3 rounded-xl border border-slate-200 dark:border-neutral-700">
+                            <label className="text-xs font-semibold text-slate-900 dark:text-neutral-100 flex items-center gap-1.5">
+                                <History className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                Alasan / Keterangan Usulan Perubahan
+                            </label>
+                            <Textarea
+                                rows={2}
+                                value={editPokdakanForm.alasan}
+                                onChange={(e) => setEditPokdakanForm({ ...editPokdakanForm, alasan: e.target.value })}
+                                placeholder="Jelaskan alasan pembaruan data (misal: perubahan nomor kontak ketua atau penambahan unit bantuan)"
+                                className="bg-white dark:bg-neutral-900 text-xs"
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-neutral-800">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingPokdakan(null)}
+                                disabled={isSubmittingEditPokdakan}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer"
+                                disabled={isSubmittingEditPokdakan}
+                            >
+                                {isSubmittingEditPokdakan ? 'Mengirim...' : 'Kirim Usulan Perubahan'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Persetujuan Usulan Perubahan Pokdakan */}
+            <Dialog open={isApprovalModalOpen} onOpenChange={setIsApprovalModalOpen}>
+                <DialogContent className="w-[95vw] !max-w-3xl max-h-[88vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                            <CheckCircle2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                            Persetujuan Perubahan Profil Pokdakan
+                        </DialogTitle>
+                        <DialogDescription>
+                            {role === 'admin_provinsi'
+                                ? 'Tinjau dan konfirmasi pengajuan perubahan data profil kelompok pembudidaya dari Admin Kabupaten.'
+                                : 'Daftar pengajuan perubahan data profil kelompok pembudidaya yang sedang menunggu konfirmasi Admin Provinsi.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {pending_pokdakan_requests && pending_pokdakan_requests.length > 0 ? (
+                            pending_pokdakan_requests.map((item) => (
+                                <div
+                                    key={`approval-item-${item.id}`}
+                                    className="rounded-xl border border-slate-200/90 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-4 shadow-xs space-y-3"
+                                >
+                                    {/* Header Request */}
+                                    <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 dark:border-neutral-800 pb-2.5">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                                                    {item.pokdakan?.nama_pokdakan || 'Pokdakan'}
+                                                </h4>
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40">
+                                                    {item.pokdakan?.kabupaten_kota || '-'}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-slate-500 dark:text-neutral-400 mt-1 flex flex-wrap items-center gap-x-2">
+                                                <span>Diajukan oleh: <strong>{item.user?.name || 'Admin'}</strong> ({item.user?.kabupaten || item.user?.role || 'Admin'})</span>
+                                                <span>&bull;</span>
+                                                <span>{formatDateTime(item.created_at)}</span>
+                                            </div>
+                                        </div>
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 px-2.5 py-1 rounded-full">
+                                            <Clock className="h-3 w-3 animate-pulse text-amber-600" />
+                                            Menunggu Konfirmasi
+                                        </span>
+                                    </div>
+
+                                    {/* Alasan Pengajuan */}
+                                    {item.alasan && (
+                                        <div className="text-xs bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 p-2.5 rounded-lg border border-amber-200/60 dark:border-amber-900/40">
+                                            <strong className="block font-semibold mb-0.5">Alasan Pengajuan Perubahan:</strong>
+                                            {item.alasan}
+                                        </div>
+                                    )}
+
+                                    {/* Diff Table Comparison */}
+                                    <div>
+                                        <div className="text-xs font-semibold text-slate-700 dark:text-neutral-300 mb-1.5">
+                                            Rincian Data yang Diusulkan Berubah:
+                                        </div>
+                                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-neutral-800">
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-slate-50 dark:bg-neutral-800/80 text-slate-600 dark:text-neutral-400 uppercase text-[10px]">
+                                                    <tr>
+                                                        <th className="px-3 py-2">Kolom Informasi</th>
+                                                        <th className="px-3 py-2">Data Semula (Master)</th>
+                                                        <th className="px-3 py-2">Data Usulan Baru</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 dark:divide-neutral-800">
+                                                    {Object.entries(item.perubahan || {}).map(([key, diff]) => (
+                                                        <tr key={key} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40">
+                                                            <td className="px-3 py-2 font-medium text-slate-800 dark:text-neutral-200">
+                                                                {fieldLabels[key] || key}
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <span className="line-through text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded text-[11px]">
+                                                                    {diff?.sebelum !== null && diff?.sebelum !== undefined && diff?.sebelum !== '' ? String(diff.sebelum) : '-'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <span className="font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded text-[11px]">
+                                                                    {diff?.sesudah !== null && diff?.sesudah !== undefined && diff?.sesudah !== '' ? String(diff.sesudah) : '-'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Controls for Admin Provinsi */}
+                                    {role === 'admin_provinsi' && (
+                                        <div className="pt-2 border-t border-slate-100 dark:border-neutral-800">
+                                            {reviewingItem?.id === item.id ? (
+                                                <div className="space-y-2.5 bg-slate-50 dark:bg-neutral-800/50 p-3 rounded-xl border border-slate-200 dark:border-neutral-700">
+                                                    <label className="text-xs font-semibold text-slate-800 dark:text-neutral-200">
+                                                        Catatan Review / Konfirmasi (Opsional):
+                                                    </label>
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Tulis catatan (misal: Data telah sesuai dokumen verifikasi dinas)"
+                                                        value={reviewCatatan}
+                                                        onChange={(e) => setReviewCatatan(e.target.value)}
+                                                        className="bg-white dark:bg-neutral-900 text-xs"
+                                                    />
+                                                    <div className="flex items-center justify-end gap-2 pt-1">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-xs h-8"
+                                                            onClick={() => {
+                                                                setReviewingItem(null);
+                                                                setReviewCatatan('');
+                                                            }}
+                                                            disabled={isProcessingApproval}
+                                                        >
+                                                            Batal
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="text-xs h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 dark:border-rose-900/60"
+                                                            onClick={() => handleRejectPokdakan(item)}
+                                                            disabled={isProcessingApproval}
+                                                        >
+                                                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                                                            {isProcessingApproval ? 'Memproses...' : 'Tolak Usulan'}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                                            onClick={() => handleApprovePokdakan(item)}
+                                                            disabled={isProcessingApproval}
+                                                        >
+                                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                                            {isProcessingApproval ? 'Memproses...' : 'Setujui & Perbarui Pokdakan'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-xs h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 dark:border-rose-900/60 cursor-pointer"
+                                                        onClick={() => {
+                                                            setReviewingItem(item);
+                                                            setReviewCatatan('Ditolak oleh Admin Provinsi.');
+                                                        }}
+                                                    >
+                                                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                                                        Tolak...
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer"
+                                                        onClick={() => {
+                                                            setReviewingItem(item);
+                                                            setReviewCatatan('Disetujui oleh Admin Provinsi.');
+                                                        }}
+                                                    >
+                                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                                        Tinjau & Setujui
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-12 text-center text-slate-500 dark:text-neutral-400 space-y-2">
+                                <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto opacity-70" />
+                                <div className="text-sm font-semibold text-slate-700 dark:text-neutral-300">
+                                    Tidak ada usulan perubahan yang menunggu peninjauan
+                                </div>
+                                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                    Semua usulan perubahan profil Pokdakan dari kabupaten telah diproses atau belum ada usulan baru yang diajukan.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end pt-3 border-t border-slate-100 dark:border-neutral-800">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsApprovalModalOpen(false)}
                         >
                             Tutup
                         </Button>

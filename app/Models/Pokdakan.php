@@ -38,4 +38,14 @@ class Pokdakan extends Model
     {
         return $this->hasMany(LaporanKolamRas::class);
     }
+
+    public function perubahans()
+    {
+        return $this->hasMany(PokdakanPerubahan::class)->latest();
+    }
+
+    public function pendingPerubahan()
+    {
+        return $this->hasOne(PokdakanPerubahan::class)->where('status', 'pending')->latestOfMany();
+    }
 }
