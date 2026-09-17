@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pokdakan;
 use App\Models\LaporanMesinPakan;
 use App\Models\LaporanKolamRas;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -48,11 +49,14 @@ class DashboardController extends Controller
         // For laporan, we want to fetch the ones related to the filtered Pokdakans
         $pokdakanIds = $pokdakans->pluck('id');
 
-        $laporanMesinQuery = LaporanMesinPakan::with(['pokdakan', 'riwayat.user'])
+        $hasRiwayat = Schema::hasTable('laporan_riwayats');
+        $laporanRelations = $hasRiwayat ? ['pokdakan', 'riwayat.user'] : ['pokdakan'];
+
+        $laporanMesinQuery = LaporanMesinPakan::with($laporanRelations)
             ->whereIn('pokdakan_id', $pokdakanIds)
             ->orderBy('tanggal_input', 'desc');
 
-        $laporanRasQuery = LaporanKolamRas::with(['pokdakan', 'riwayat.user'])
+        $laporanRasQuery = LaporanKolamRas::with($laporanRelations)
             ->whereIn('pokdakan_id', $pokdakanIds)
             ->orderBy('tanggal_input', 'desc');
 
