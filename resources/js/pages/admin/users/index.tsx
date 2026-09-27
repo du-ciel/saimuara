@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +12,22 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Edit2, KeyRound, UserPlus, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import {
+    Edit2,
+    KeyRound,
+    UserPlus,
+    Trash2,
+    ShieldCheck,
+    AlertTriangle,
+    Search,
+    MapPin,
+    Mail,
+    Users,
+    CheckCircle2,
+    RotateCcw,
+    Building2,
+    ShieldAlert,
+} from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 import { toast } from 'sonner';
 
@@ -50,6 +64,10 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
     const [passwordUser, setPasswordUser] = useState<User | null>(null);
     const [deleteUser, setDeleteUser] = useState<User | null>(null);
 
+    // Search and filter state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedKabupatenFilter, setSelectedKabupatenFilter] = useState('semua');
+
     const createForm = useForm({
         name: '',
         email: '',
@@ -68,11 +86,38 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
         password_confirmation: '',
     });
 
+    // Filtered users calculation
+    const filteredUsers = useMemo(() => {
+        return adminUsers.filter((user) => {
+            const query = searchQuery.toLowerCase().trim();
+            const matchesSearch =
+                query === '' ||
+                user.name.toLowerCase().includes(query) ||
+                user.email.toLowerCase().includes(query) ||
+                (user.kabupaten && user.kabupaten.toLowerCase().includes(query));
+
+            const matchesKab =
+                selectedKabupatenFilter === 'semua' ||
+                user.kabupaten === selectedKabupatenFilter;
+
+            return matchesSearch && matchesKab;
+        });
+    }, [adminUsers, searchQuery, selectedKabupatenFilter]);
+
+    // Summary statistics
+    const registeredCount = adminUsers.length;
+    const coveredKabupatenCount = useMemo(() => {
+        return new Set(adminUsers.map((u) => u.kabupaten).filter(Boolean)).size;
+    }, [adminUsers]);
+    const totalKabupaten = listKabupaten.length;
+
     const handleKabupatenSelect = (kab: string) => {
+        const cleanKab = kab.toLowerCase().replace(/\s+/g, '');
         createForm.setData({
             ...createForm.data,
             kabupaten: kab,
             name: createForm.data.name || `Admin Kab. ${kab}`,
+            email: createForm.data.email || `admin.${cleanKab}@dkp.lampung.go.id`,
         });
     };
 
@@ -143,21 +188,31 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
         });
     };
 
+    const resetFilters = () => {
+        setSearchQuery('');
+        setSelectedKabupatenFilter('semua');
+    };
+
     return (
         <>
-            <Head title="Kelola Admin" />
-            <div className="relative flex h-full flex-1 flex-col gap-6 overflow-y-auto rounded-xl p-4 md:p-8 z-0">
+            <Head title="Kelola Admin Kabupaten" />
+            <div className="relative flex h-full flex-1 flex-col gap-6 overflow-y-auto rounded-xl p-4 sm:p-6 md:p-8 z-0">
                 
+                {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <div className="flex items-center gap-2">
-                            <ShieldCheck className="h-7 w-7 text-blue-600 dark:text-blue-400" />
-                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-blue-950 dark:text-blue-50">
-                                Kelola Admin Kabupaten
-                            </h1>
+                        <div className="flex items-center gap-2.5">
+                            <div className="h-10 w-10 rounded-xl bg-blue-600/10 dark:bg-blue-400/10 border border-blue-200 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-2xs">
+                                <ShieldCheck className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                                    Kelola Admin Kabupaten
+                                </h1>
+                            </div>
                         </div>
-                        <p className="text-slate-500 dark:text-neutral-400 mt-1 text-sm">
-                            Manajemen terpusat akun resmi admin kabupaten se-Provinsi Lampung. Registrasi publik dinonaktifkan untuk keamanan.
+                        <p className="text-slate-500 dark:text-neutral-400 mt-1.5 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                            Manajemen terpusat akun resmi admin kabupaten se-Provinsi Lampung. Registrasi publik dinonaktifkan secara ketat untuk keamanan data sistem.
                         </p>
                     </div>
 
@@ -167,55 +222,225 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
                             createForm.reset();
                             setIsCreateOpen(true);
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm rounded-xl cursor-pointer"
+                        className="h-10 px-4 text-xs font-bold rounded-xl flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer shrink-0"
                     >
                         <UserPlus className="h-4 w-4" />
-                        Tambah Admin Baru
+                        <span>Tambah Admin Baru</span>
                     </Button>
                 </div>
 
-                <div className="rounded-xl border border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-xl dark:bg-neutral-900/70 dark:border-neutral-800/60 overflow-hidden">
+                {/* Statistic Overview Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {/* Stat 1: Total Admin */}
+                    <div className="rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-2xs backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-900/80 flex items-center gap-3.5 transition-all hover:shadow-sm">
+                        <div className="h-11 w-11 rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <Users className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-xs font-medium text-slate-500 dark:text-neutral-400">Total Akun Admin</div>
+                            <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">
+                                {registeredCount} <span className="text-xs font-semibold text-slate-400">Akun</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stat 2: Cakupan Wilayah */}
+                    <div className="rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-2xs backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-900/80 flex items-center gap-3.5 transition-all hover:shadow-sm">
+                        <div className="h-11 w-11 rounded-xl bg-teal-500/10 text-teal-600 dark:bg-teal-400/10 dark:text-teal-400 flex items-center justify-center shrink-0">
+                            <Building2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-xs font-medium text-slate-500 dark:text-neutral-400">Cakupan Wilayah</div>
+                            <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">
+                                {coveredKabupatenCount} <span className="text-xs font-normal text-slate-400">/ {totalKabupaten} Daerah</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stat 3: Keamanan */}
+                    <div className="rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-2xs backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-900/80 flex items-center gap-3.5 transition-all hover:shadow-sm">
+                        <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-xs font-medium text-slate-500 dark:text-neutral-400">Status Akses Portal</div>
+                            <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1.5">
+                                <span>Terkontrol Penuh</span>
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-slate-200/80 bg-white dark:border-neutral-800 dark:bg-neutral-900 shadow-2xs">
+                    <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        {/* Search Input */}
+                        <div className="relative flex-1">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-neutral-500" />
+                            <Input
+                                type="text"
+                                placeholder="Cari berdasarkan nama, kabupaten, atau email..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 h-9.5 text-xs bg-slate-50 dark:bg-neutral-800/80 border-slate-200 dark:border-neutral-700 rounded-lg focus-visible:ring-blue-500/20"
+                            />
+                        </div>
+
+                        {/* Dropdown Filter Kabupaten */}
+                        <div className="w-full sm:w-[220px]">
+                            <Select value={selectedKabupatenFilter} onValueChange={setSelectedKabupatenFilter}>
+                                <SelectTrigger className="h-9.5 text-xs bg-slate-50 dark:bg-neutral-800/80 border-slate-200 dark:border-neutral-700 rounded-lg">
+                                    <SelectValue placeholder="Filter Kabupaten" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="semua">Semua Wilayah ({totalKabupaten})</SelectItem>
+                                    {listKabupaten.map((kab) => (
+                                        <SelectItem key={kab} value={kab}>{kab}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Reset Filter Button */}
+                        {(searchQuery !== '' || selectedKabupatenFilter !== 'semua') && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={resetFilters}
+                                className="h-9.5 px-3 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white gap-1.5 cursor-pointer"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Reset
+                            </Button>
+                        )}
+                    </div>
+
+                    <div className="text-xs font-medium text-slate-500 dark:text-neutral-400 self-end sm:self-center px-1">
+                        Menampilkan <strong className="text-slate-800 dark:text-neutral-200">{filteredUsers.length}</strong> dari {registeredCount} admin
+                    </div>
+                </div>
+
+                {/* Table Section */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:bg-neutral-900 dark:border-neutral-800 overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/50 dark:bg-neutral-800/50 dark:text-neutral-400 border-b border-slate-200 dark:border-neutral-800">
-                                <tr>
-                                    <th className="px-6 py-4 font-medium">Nama</th>
-                                    <th className="px-6 py-4 font-medium">Kabupaten</th>
-                                    <th className="px-6 py-4 font-medium">Email</th>
-                                    <th className="px-6 py-4 font-medium text-right">Aksi</th>
+                        <table className="w-full text-sm text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-200/80 dark:border-neutral-800 bg-slate-50/80 dark:bg-neutral-800/60 text-slate-500 dark:text-neutral-400 text-xs font-bold uppercase tracking-wider">
+                                    <th className="px-5 py-3.5 w-12 text-center">#</th>
+                                    <th className="px-5 py-3.5 min-w-[200px]">Nama Akun</th>
+                                    <th className="px-5 py-3.5 min-w-[190px]">Wilayah Kabupaten / Kota</th>
+                                    <th className="px-5 py-3.5 min-w-[240px]">Alamat Email</th>
+                                    <th className="px-5 py-3.5 min-w-[250px] text-right">Aksi Manajemen</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {adminUsers.map((user) => (
-                                    <tr key={user.id} className="border-b border-slate-100 dark:border-neutral-800/50 hover:bg-slate-50/50 dark:hover:bg-neutral-800/50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-neutral-100">
-                                            {user.name}
+                            <tbody className="divide-y divide-slate-100 dark:divide-neutral-800/70">
+                                {filteredUsers.map((user, index) => (
+                                    <tr
+                                        key={user.id}
+                                        className="hover:bg-slate-50/70 dark:hover:bg-neutral-800/40 transition-colors"
+                                    >
+                                        {/* No */}
+                                        <td className="px-5 py-3.5 text-center text-xs font-semibold text-slate-400 dark:text-neutral-500">
+                                            {index + 1}
                                         </td>
-                                        <td className="px-6 py-4 text-slate-600 dark:text-neutral-300">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/50">
-                                                {user.kabupaten || '-'}
+
+                                        {/* Nama Admin */}
+                                        <td className="px-5 py-3.5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8.5 w-8.5 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                                                    {user.name.replace('Admin Kab. ', '').substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-900 dark:text-white leading-tight">
+                                                        {user.name}
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-400 dark:text-neutral-500 mt-0.5">
+                                                        Admin Resmi Kabupaten
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        {/* Kabupaten Badge */}
+                                        <td className="px-5 py-3.5">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/70 dark:border-blue-900/60 shadow-2xs">
+                                                <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                                                <span>{user.kabupaten || '-'}</span>
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-600 dark:text-neutral-300">
-                                            {user.email}
+
+                                        {/* Email */}
+                                        <td className="px-5 py-3.5">
+                                            <div className="inline-flex items-center gap-2 text-xs font-mono text-slate-600 dark:text-neutral-300">
+                                                <Mail className="h-3.5 w-3.5 text-slate-400 dark:text-neutral-500 shrink-0" />
+                                                <span>{user.email}</span>
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right space-x-2">
-                                            <Button variant="outline" size="sm" onClick={() => openEditModal(user)} className="cursor-pointer">
-                                                <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
-                                            </Button>
-                                            <Button variant="outline" size="sm" onClick={() => openPasswordModal(user)} className="cursor-pointer">
-                                                <KeyRound className="w-3.5 h-3.5 mr-1" /> Reset Sandi
-                                            </Button>
-                                            <Button variant="ghost" size="sm" onClick={() => setDeleteUser(user)} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer">
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </Button>
+
+                                        {/* Aksi */}
+                                        <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openEditModal(user)}
+                                                    className="h-8 px-2.5 text-xs font-bold rounded-lg border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-neutral-700 shadow-2xs cursor-pointer gap-1"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                                                    <span>Edit</span>
+                                                </Button>
+
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openPasswordModal(user)}
+                                                    className="h-8 px-2.5 text-xs font-bold rounded-lg border-amber-200/80 dark:border-amber-800/70 bg-amber-50/50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100/70 dark:hover:bg-amber-900/50 shadow-2xs cursor-pointer gap-1"
+                                                >
+                                                    <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                                                    <span>Reset Sandi</span>
+                                                </Button>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setDeleteUser(user)}
+                                                    className="h-8 w-8 p-0 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                                    title="Hapus Akun Admin"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
-                                {adminUsers.length === 0 && (
+
+                                {filteredUsers.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-neutral-500">
-                                            Belum ada akun admin kabupaten terdaftar. Klik tombol di atas untuk menambahkan.
+                                        <td colSpan={5} className="px-6 py-12 text-center">
+                                            <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                                                <div className="h-12 w-12 rounded-2xl bg-slate-100 dark:bg-neutral-800 flex items-center justify-center text-slate-400 mb-3">
+                                                    <Search className="h-6 w-6" />
+                                                </div>
+                                                <div className="font-bold text-slate-800 dark:text-neutral-200 text-sm">
+                                                    Tidak ada admin yang cocok
+                                                </div>
+                                                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                                                    Tidak ditemukan akun admin dengan kata kunci pencarian atau filter wilayah yang dipilih.
+                                                </p>
+                                                {(searchQuery !== '' || selectedKabupatenFilter !== 'semua') && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={resetFilters}
+                                                        className="mt-3 text-xs font-bold rounded-lg"
+                                                    >
+                                                        Hapus Filter Pencarian
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
@@ -229,19 +454,23 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <UserPlus className="h-5 w-5 text-blue-600" />
-                            Tambah Admin Kabupaten
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
+                            <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                                <UserPlus className="h-4.5 w-4.5" />
+                            </div>
+                            <span>Tambah Admin Kabupaten</span>
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-xs">
                             Daftarkan akun admin baru untuk perwakilan dinas perikanan kabupaten/kota.
                         </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={submitCreate} className="space-y-3.5">
+                    <form onSubmit={submitCreate} className="space-y-3.5 pt-1">
                         <div className="space-y-1.5">
-                            <Label htmlFor="create-kabupaten">Pilih Wilayah Kabupaten *</Label>
+                            <Label htmlFor="create-kabupaten" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Pilih Wilayah Kabupaten *
+                            </Label>
                             <Select value={createForm.data.kabupaten} onValueChange={handleKabupatenSelect}>
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger className="w-full text-xs h-9.5 rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700">
                                     <SelectValue placeholder="Pilih Kabupaten / Kota" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -250,23 +479,28 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {createForm.errors.kabupaten && <p className="text-xs text-red-500">{createForm.errors.kabupaten}</p>}
+                            {createForm.errors.kabupaten && <p className="text-xs text-rose-500 font-medium">{createForm.errors.kabupaten}</p>}
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="create-name">Nama Akun *</Label>
+                            <Label htmlFor="create-name" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Nama Akun *
+                            </Label>
                             <Input
                                 id="create-name"
                                 value={createForm.data.name}
                                 onChange={(e) => createForm.setData('name', e.target.value)}
                                 placeholder="Admin Kab. ..."
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700"
                             />
-                            {createForm.errors.name && <p className="text-xs text-red-500">{createForm.errors.name}</p>}
+                            {createForm.errors.name && <p className="text-xs text-rose-500 font-medium">{createForm.errors.name}</p>}
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="create-email">Alamat Email *</Label>
+                            <Label htmlFor="create-email" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Alamat Email Resmi *
+                            </Label>
                             <Input
                                 id="create-email"
                                 type="email"
@@ -274,12 +508,15 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
                                 onChange={(e) => createForm.setData('email', e.target.value)}
                                 placeholder="admin@dkp.lampung.go.id"
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 font-mono"
                             />
-                            {createForm.errors.email && <p className="text-xs text-red-500">{createForm.errors.email}</p>}
+                            {createForm.errors.email && <p className="text-xs text-rose-500 font-medium">{createForm.errors.email}</p>}
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="create-password">Kata Sandi *</Label>
+                            <Label htmlFor="create-password" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Kata Sandi Akun *
+                            </Label>
                             <Input
                                 id="create-password"
                                 type="password"
@@ -287,12 +524,15 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
                                 onChange={(e) => createForm.setData('password', e.target.value)}
                                 placeholder="Minimal 8 karakter"
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700"
                             />
-                            {createForm.errors.password && <p className="text-xs text-red-500">{createForm.errors.password}</p>}
+                            {createForm.errors.password && <p className="text-xs text-rose-500 font-medium">{createForm.errors.password}</p>}
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="create-password-confirmation">Konfirmasi Kata Sandi *</Label>
+                            <Label htmlFor="create-password-confirmation" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Konfirmasi Kata Sandi *
+                            </Label>
                             <Input
                                 id="create-password-confirmation"
                                 type="password"
@@ -300,12 +540,15 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
                                 onChange={(e) => createForm.setData('password_confirmation', e.target.value)}
                                 placeholder="Ketik ulang kata sandi"
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700"
                             />
                         </div>
 
                         <DialogFooter className="pt-2">
-                            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Batal</Button>
-                            <Button type="submit" disabled={createForm.processing} className="bg-blue-600 hover:bg-blue-700 text-white">
+                            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="text-xs font-bold rounded-lg">
+                                Batal
+                            </Button>
+                            <Button type="submit" disabled={createForm.processing} className="text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
                                 {createForm.processing ? 'Menyimpan...' : 'Simpan Admin'}
                             </Button>
                         </DialogFooter>
@@ -315,36 +558,53 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
 
             {/* Modal Edit Profil */}
             <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Edit Profil Admin</DialogTitle>
-                        <DialogDescription>Ubah detail email atau nama kabupaten untuk {editUser?.name}.</DialogDescription>
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
+                            <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                                <Edit2 className="h-4.5 w-4.5" />
+                            </div>
+                            <span>Edit Profil Admin</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Ubah detail email atau nama kabupaten untuk <strong>{editUser?.name}</strong>.
+                        </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={submitEdit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="kabupaten">Kabupaten</Label>
+                    <form onSubmit={submitEdit} className="space-y-3.5 pt-1">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="kabupaten" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Wilayah Kabupaten
+                            </Label>
                             <Input
                                 id="kabupaten"
                                 value={editForm.data.kabupaten}
                                 onChange={(e) => editForm.setData('kabupaten', e.target.value)}
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700"
                             />
-                            {editForm.errors.kabupaten && <p className="text-sm text-red-500">{editForm.errors.kabupaten}</p>}
+                            {editForm.errors.kabupaten && <p className="text-xs text-rose-500 font-medium">{editForm.errors.kabupaten}</p>}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="email" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Alamat Email
+                            </Label>
                             <Input
                                 id="email"
                                 type="email"
                                 value={editForm.data.email}
                                 onChange={(e) => editForm.setData('email', e.target.value)}
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 font-mono"
                             />
-                            {editForm.errors.email && <p className="text-sm text-red-500">{editForm.errors.email}</p>}
+                            {editForm.errors.email && <p className="text-xs text-rose-500 font-medium">{editForm.errors.email}</p>}
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Batal</Button>
-                            <Button type="submit" disabled={editForm.processing}>Simpan Perubahan</Button>
+                        <DialogFooter className="pt-2">
+                            <Button type="button" variant="outline" onClick={() => setEditUser(null)} className="text-xs font-bold rounded-lg">
+                                Batal
+                            </Button>
+                            <Button type="submit" disabled={editForm.processing} className="text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">
+                                {editForm.processing ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -352,36 +612,55 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
 
             {/* Modal Reset Password */}
             <Dialog open={!!passwordUser} onOpenChange={(open) => !open && setPasswordUser(null)}>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Reset Kata Sandi</DialogTitle>
-                        <DialogDescription>Masukkan kata sandi baru untuk {passwordUser?.name}.</DialogDescription>
+                        <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
+                            <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                                <KeyRound className="h-4.5 w-4.5" />
+                            </div>
+                            <span>Reset Kata Sandi Akun</span>
+                        </DialogTitle>
+                        <DialogDescription className="text-xs">
+                            Masukkan kata sandi baru untuk <strong>{passwordUser?.name}</strong> ({passwordUser?.email}).
+                        </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={submitPassword} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Kata Sandi Baru</Label>
+                    <form onSubmit={submitPassword} className="space-y-3.5 pt-1">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="password" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Kata Sandi Baru *
+                            </Label>
                             <Input
                                 id="password"
                                 type="password"
                                 value={passwordForm.data.password}
                                 onChange={(e) => passwordForm.setData('password', e.target.value)}
+                                placeholder="Minimal 8 karakter"
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700"
                             />
-                            {passwordForm.errors.password && <p className="text-sm text-red-500">{passwordForm.errors.password}</p>}
+                            {passwordForm.errors.password && <p className="text-xs text-rose-500 font-medium">{passwordForm.errors.password}</p>}
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password_confirmation">Konfirmasi Kata Sandi</Label>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="password_confirmation" className="text-xs font-bold text-slate-700 dark:text-neutral-300">
+                                Konfirmasi Kata Sandi Baru *
+                            </Label>
                             <Input
                                 id="password_confirmation"
                                 type="password"
                                 value={passwordForm.data.password_confirmation}
                                 onChange={(e) => passwordForm.setData('password_confirmation', e.target.value)}
+                                placeholder="Ketik ulang kata sandi baru"
                                 required
+                                className="h-9.5 text-xs rounded-lg bg-slate-50 dark:bg-neutral-800 border-slate-200 dark:border-neutral-700"
                             />
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setPasswordUser(null)}>Batal</Button>
-                            <Button type="submit" disabled={passwordForm.processing}>Simpan Kata Sandi</Button>
+                        <DialogFooter className="pt-2">
+                            <Button type="button" variant="outline" onClick={() => setPasswordUser(null)} className="text-xs font-bold rounded-lg">
+                                Batal
+                            </Button>
+                            <Button type="submit" disabled={passwordForm.processing} className="text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white">
+                                {passwordForm.processing ? 'Menyimpan...' : 'Simpan Kata Sandi'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -391,18 +670,20 @@ export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KA
             <Dialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-rose-600">
+                        <DialogTitle className="flex items-center gap-2 text-rose-600 font-bold">
                             <AlertTriangle className="h-5 w-5" />
-                            Hapus Akun Admin?
+                            <span>Hapus Akun Admin?</span>
                         </DialogTitle>
-                        <DialogDescription>
-                            Akun <strong>{deleteUser?.name}</strong> ({deleteUser?.email}) akan dihapus secara permanen dari sistem.
+                        <DialogDescription className="text-xs leading-relaxed">
+                            Akun resmi <strong>{deleteUser?.name}</strong> ({deleteUser?.email}) untuk wilayah <strong>{deleteUser?.kabupaten}</strong> akan dihapus secara permanen. Admin tersebut tidak akan dapat login lagi.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:gap-0 pt-2">
-                        <Button type="button" variant="outline" onClick={() => setDeleteUser(null)}>Batal</Button>
-                        <Button type="button" variant="destructive" onClick={confirmDelete}>
-                            Ya, Hapus
+                        <Button type="button" variant="outline" onClick={() => setDeleteUser(null)} className="text-xs font-bold rounded-lg">
+                            Batal
+                        </Button>
+                        <Button type="button" variant="destructive" onClick={confirmDelete} className="text-xs font-bold rounded-lg">
+                            Ya, Hapus Akun
                         </Button>
                     </DialogFooter>
                 </DialogContent>
