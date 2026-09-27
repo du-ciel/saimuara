@@ -246,6 +246,21 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
         }
     };
 
+    const formatDate = (dateStr?: string | null) => {
+        if (!dateStr) return '-';
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return new Intl.DateTimeFormat('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+            }).format(d);
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
     const fieldLabels: Record<string, string> = {
         tanggal_input: 'Tanggal Input',
         status_mesin: 'Status Mesin',
@@ -856,12 +871,12 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                 </div>
 
                 {/* TABS MENU */}
-                <div className="flex space-x-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800 md:w-max">
+                <div className="flex space-x-1.5 rounded-xl bg-slate-100/90 p-1.5 dark:bg-neutral-800/90 border border-slate-200/60 dark:border-neutral-700/60 md:w-max shadow-2xs">
                     <button
                         onClick={() => setActiveTab('pokdakan')}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'pokdakan'
-                            ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
-                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
+                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs md:text-sm font-bold transition-all duration-150 cursor-pointer ${activeTab === 'pokdakan'
+                            ? 'bg-white text-slate-900 shadow-xs dark:bg-neutral-900 dark:text-white'
+                            : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-neutral-700/50'
                             }`}
                     >
                         <Building2 className="h-4 w-4" />
@@ -869,9 +884,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                     </button>
                     <button
                         onClick={() => setActiveTab('mesin')}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'mesin'
-                            ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
-                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
+                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs md:text-sm font-bold transition-all duration-150 cursor-pointer ${activeTab === 'mesin'
+                            ? 'bg-white text-slate-900 shadow-xs dark:bg-neutral-900 dark:text-white'
+                            : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-neutral-700/50'
                             }`}
                     >
                         <Cog className="h-4 w-4" />
@@ -879,9 +894,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                     </button>
                     <button
                         onClick={() => setActiveTab('ras')}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'ras'
-                            ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
-                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
+                        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs md:text-sm font-bold transition-all duration-150 cursor-pointer ${activeTab === 'ras'
+                            ? 'bg-white text-slate-900 shadow-xs dark:bg-neutral-900 dark:text-white'
+                            : 'text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-neutral-700/50'
                             }`}
                     >
                         <Waves className="h-4 w-4" />
@@ -1037,7 +1052,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="flex-1 text-xs h-8 bg-slate-50 dark:bg-neutral-800/80 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/60 dark:hover:text-blue-400 border-slate-200 dark:border-neutral-700"
+                                                    className="flex-1 text-xs h-8 font-semibold rounded-lg bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 border-slate-200/90 dark:border-neutral-700 shadow-2xs hover:shadow-md hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-slate-900 dark:hover:text-white hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer"
                                                     onClick={() => setSelectedPokdakan(p)}
                                                 >
                                                     Detail Profil
@@ -1047,12 +1062,12 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                         variant="outline"
                                                         size="sm"
                                                         disabled={!!p.pending_perubahan}
-                                                        className="text-xs h-8 px-2.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/60 dark:border-neutral-700 font-medium cursor-pointer disabled:opacity-50"
+                                                        className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer disabled:opacity-50 gap-1"
                                                         onClick={() => handleOpenEditPokdakan(p)}
                                                         title={p.pending_perubahan ? 'Usulan perubahan sedang ditinjau Admin Provinsi' : 'Edit Profil Pokdakan'}
                                                     >
-                                                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                                                        {p.pending_perubahan ? 'Ditinjau' : 'Edit'}
+                                                        <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                                        <span>{p.pending_perubahan ? 'Ditinjau' : 'Edit'}</span>
                                                     </Button>
                                                 )}
                                             </div>
@@ -1129,12 +1144,12 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                                     <Button
                                                                         variant="outline"
                                                                         size="sm"
-                                                                        className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                                        className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                                                         onClick={() => handleOpenEditPokdakan(p)}
                                                                         title="Edit Profil Pokdakan"
                                                                     >
-                                                                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                                                                        Edit
+                                                                        <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                                                        <span>Edit</span>
                                                                     </Button>
                                                                 )}
                                                             </div>
@@ -1178,8 +1193,8 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                             onClick={() => setSelectedLaporanMesin(lm)}
                                         >
                                             <td className="px-6 py-4">
-                                                <div className="font-semibold text-neutral-900 dark:text-white">{lm.tanggal_input}</div>
-                                                <div className="mt-1 text-xs">{lm.pokdakan?.nama_pokdakan}</div>
+                                                <div className="font-semibold text-neutral-900 dark:text-white">{formatDate(lm.tanggal_input)}</div>
+                                                <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-300 font-medium">{lm.pokdakan?.nama_pokdakan}</div>
                                                 {lm.riwayat && lm.riwayat.length > 0 && (
                                                     <button
                                                         type="button"
@@ -1191,7 +1206,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                                 riwayat: lm.riwayat || []
                                                             });
                                                         }}
-                                                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 mt-1.5 cursor-pointer transition-colors"
+                                                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 mt-1.5 cursor-pointer shadow-2xs hover:shadow-xs transition-all"
                                                         title="Klik untuk melihat riwayat perubahan"
                                                     >
                                                         <History className="h-3 w-3 text-amber-600 dark:text-amber-400" />
@@ -1221,28 +1236,28 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                            className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                                             onClick={() => handleOpenEditMesin(lm)}
                                                             title="Edit Laporan Mesin"
                                                         >
-                                                            <Pencil className="h-3.5 w-3.5 mr-1" />
-                                                            Edit
+                                                            <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                                            <span>Edit</span>
                                                         </Button>
                                                         {role === 'admin_provinsi' && (
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                                className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900/50 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                                                 onClick={() => setDeletingItem({
                                                                     type: 'mesin',
                                                                     id: lm.id,
                                                                     title: `Laporan Mesin Pakan - ${lm.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                                    subtitle: `Tanggal input: ${lm.tanggal_input} | Produksi: ${lm.produksi_pakan_kg} Kg`
+                                                                    subtitle: `Tanggal input: ${formatDate(lm.tanggal_input)} | Produksi: ${lm.produksi_pakan_kg} Kg`
                                                                 })}
                                                                 title="Hapus Laporan Mesin"
                                                             >
-                                                                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                                                Hapus
+                                                                <Trash2 className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                                                <span>Hapus</span>
                                                             </Button>
                                                         )}
                                                     </div>
@@ -1285,8 +1300,8 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="font-semibold text-neutral-900 dark:text-white">Siklus Ke-{lr.siklus_ke}</div>
-                                                <div className="mt-1 text-xs">{lr.pokdakan?.nama_pokdakan}</div>
-                                                <div className="mt-1 text-xs text-neutral-400">Tgl: {lr.tanggal_input}</div>
+                                                <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-300 font-medium">{lr.pokdakan?.nama_pokdakan}</div>
+                                                <div className="mt-1 text-xs text-neutral-400">Tgl: {formatDate(lr.tanggal_input)}</div>
                                                 {lr.riwayat && lr.riwayat.length > 0 && (
                                                     <button
                                                         type="button"
@@ -1298,7 +1313,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                                 riwayat: lr.riwayat || []
                                                             });
                                                         }}
-                                                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 mt-1.5 cursor-pointer transition-colors"
+                                                        className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 mt-1.5 cursor-pointer shadow-2xs hover:shadow-xs transition-all"
                                                         title="Klik untuk melihat riwayat perubahan"
                                                     >
                                                         <History className="h-3 w-3 text-amber-600 dark:text-amber-400" />
@@ -1332,28 +1347,28 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="h-8 px-2.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                            className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                                             onClick={() => handleOpenEditRas(lr)}
                                                             title="Edit Laporan RAS"
                                                         >
-                                                            <Pencil className="h-3.5 w-3.5 mr-1" />
-                                                            Edit
+                                                            <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                                            <span>Edit</span>
                                                         </Button>
                                                         {role === 'admin_provinsi' && (
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                                                className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900/50 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                                                 onClick={() => setDeletingItem({
                                                                     type: 'ras',
                                                                     id: lr.id,
                                                                     title: `Laporan Budidaya Kolam RAS - ${lr.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                                    subtitle: `Siklus Ke-${lr.siklus_ke} (${lr.komoditas_ikan}) | Tanggal: ${lr.tanggal_input}`
+                                                                    subtitle: `Siklus Ke-${lr.siklus_ke} (${lr.komoditas_ikan}) | Tanggal: ${formatDate(lr.tanggal_input)}`
                                                                 })}
                                                                 title="Hapus Laporan RAS"
                                                             >
-                                                                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                                                Hapus
+                                                                <Trash2 className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                                                <span>Hapus</span>
                                                             </Button>
                                                         )}
                                                     </div>
@@ -1580,15 +1595,15 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         variant="outline"
                                         size="sm"
                                         disabled={!!selectedPokdakan.pending_perubahan}
-                                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer disabled:opacity-50"
+                                        className="h-8 px-3 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer disabled:opacity-50 gap-1.5"
                                         onClick={() => {
                                             const target = selectedPokdakan;
                                             setSelectedPokdakan(null);
                                             handleOpenEditPokdakan(target);
                                         }}
                                     >
-                                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                                        {selectedPokdakan.pending_perubahan ? 'Usulan Sedang Ditinjau' : 'Edit Profil Kelompok'}
+                                        <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                        <span>{selectedPokdakan.pending_perubahan ? 'Usulan Sedang Ditinjau' : 'Edit Profil Kelompok'}</span>
                                     </Button>
                                 </div>
                             )}
@@ -1603,7 +1618,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                     <DialogHeader>
                         <DialogTitle>Detail Laporan Mesin Pakan Mandiri</DialogTitle>
                         <DialogDescription>
-                            Rincian produksi pakan tanggal {selectedLaporanMesin?.tanggal_input}.
+                            Rincian produksi pakan tanggal {formatDate(selectedLaporanMesin?.tanggal_input)}.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedLaporanMesin && (
@@ -1641,7 +1656,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-7 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-medium cursor-pointer"
+                                                className="h-7 text-xs font-semibold rounded-lg bg-amber-50/80 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800 cursor-pointer shadow-2xs hover:shadow-xs transition-all"
                                                 onClick={() => {
                                                     const target = selectedLaporanMesin;
                                                     setViewingRiwayat({
@@ -1651,7 +1666,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                     });
                                                 }}
                                             >
-                                                <History className="h-3.5 w-3.5 mr-1 text-amber-600" />
+                                                <History className="h-3.5 w-3.5 mr-1 text-amber-600 dark:text-amber-400" />
                                                 Diedit {selectedLaporanMesin.riwayat.length} kali (Lihat Catatan)
                                             </Button>
                                         </div>
@@ -1665,22 +1680,22 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                        className="h-8 px-3 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                         onClick={() => {
                                             const target = selectedLaporanMesin;
                                             setSelectedLaporanMesin(null);
                                             handleOpenEditMesin(target);
                                         }}
                                     >
-                                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                                        Edit Laporan
+                                        <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                        <span>Edit Laporan</span>
                                     </Button>
                                     {role === 'admin_provinsi' && (
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                            className="h-8 px-3 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900/50 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                             onClick={() => {
                                                 const target = selectedLaporanMesin;
                                                 setSelectedLaporanMesin(null);
@@ -1688,12 +1703,12 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                     type: 'mesin',
                                                     id: target.id,
                                                     title: `Laporan Mesin Pakan - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                    subtitle: `Tanggal input: ${target.tanggal_input} | Produksi: ${target.produksi_pakan_kg} Kg`
+                                                    subtitle: `Tanggal input: ${formatDate(target.tanggal_input)} | Produksi: ${target.produksi_pakan_kg} Kg`
                                                 });
                                             }}
                                         >
-                                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                            Hapus Laporan
+                                            <Trash2 className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                            <span>Hapus Laporan</span>
                                         </Button>
                                     )}
                                 </div>
@@ -1709,7 +1724,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                     <DialogHeader>
                         <DialogTitle>Detail Laporan Budidaya Kolam RAS</DialogTitle>
                         <DialogDescription>
-                            Laporan Siklus Ke-{selectedLaporanRas?.siklus_ke} tanggal {selectedLaporanRas?.tanggal_input}.
+                            Laporan Siklus Ke-{selectedLaporanRas?.siklus_ke} tanggal {formatDate(selectedLaporanRas?.tanggal_input)}.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedLaporanRas && (
@@ -1751,7 +1766,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-7 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800 font-medium cursor-pointer"
+                                                className="h-7 text-xs font-semibold rounded-lg bg-amber-50/80 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800 cursor-pointer shadow-2xs hover:shadow-xs transition-all"
                                                 onClick={() => {
                                                     const target = selectedLaporanRas;
                                                     setViewingRiwayat({
@@ -1761,7 +1776,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                     });
                                                 }}
                                             >
-                                                <History className="h-3.5 w-3.5 mr-1 text-amber-600" />
+                                                <History className="h-3.5 w-3.5 mr-1 text-amber-600 dark:text-amber-400" />
                                                 Diedit {selectedLaporanRas.riwayat.length} kali (Lihat Catatan)
                                             </Button>
                                         </div>
@@ -1775,22 +1790,22 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                        className="h-8 px-3 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-blue-600 dark:hover:text-blue-400 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                         onClick={() => {
                                             const target = selectedLaporanRas;
                                             setSelectedLaporanRas(null);
                                             handleOpenEditRas(target);
                                         }}
                                     >
-                                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                                        Edit Laporan
+                                        <Pencil className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                        <span>Edit Laporan</span>
                                     </Button>
                                     {role === 'admin_provinsi' && (
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 dark:border-neutral-700 font-medium cursor-pointer"
+                                            className="h-8 px-3 text-xs font-bold rounded-lg border border-slate-200/90 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900/50 shadow-2xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 cursor-pointer gap-1.5"
                                             onClick={() => {
                                                 const target = selectedLaporanRas;
                                                 setSelectedLaporanRas(null);
@@ -1798,12 +1813,12 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                     type: 'ras',
                                                     id: target.id,
                                                     title: `Laporan Budidaya Kolam RAS - ${target.pokdakan?.nama_pokdakan || 'Pokdakan'}`,
-                                                    subtitle: `Siklus Ke-${target.siklus_ke} (${target.komoditas_ikan}) | Tanggal: ${target.tanggal_input}`
+                                                    subtitle: `Siklus Ke-${target.siklus_ke} (${target.komoditas_ikan}) | Tanggal: ${formatDate(target.tanggal_input)}`
                                                 });
                                             }}
                                         >
-                                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                                            Hapus Laporan
+                                            <Trash2 className="h-3.5 w-3.5 text-slate-500 dark:text-neutral-400" />
+                                            <span>Hapus Laporan</span>
                                         </Button>
                                     )}
                                 </div>
