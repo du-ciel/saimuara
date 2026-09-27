@@ -22,11 +22,6 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
-    {
-        title: 'Input Data',
-        href: '/input',
-        icon: FileEdit,
-    },
 ];
 
 export function AppSidebar() {
@@ -34,6 +29,17 @@ export function AppSidebar() {
     const role = auth?.user?.role;
 
     const navItems = [...mainNavItems];
+
+    // Input Data khusus untuk Admin Kabupaten
+    if (role === 'admin_kabupaten') {
+        navItems.push({
+            title: 'Input Data',
+            href: '/input',
+            icon: FileEdit,
+        });
+    }
+
+    // Kelola Admin khusus untuk Admin Provinsi
     if (role === 'admin_provinsi') {
         navItems.push({
             title: 'Kelola Admin',

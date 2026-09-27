@@ -85,8 +85,8 @@ export default function Welcome() {
                 <section className="w-full max-w-7xl mx-auto px-6 pb-24 z-10 grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Feature 1 */}
                     <div className="group relative overflow-hidden rounded-2xl bg-white/60 dark:bg-neutral-900 p-8 border border-white/40 dark:border-neutral-800 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-none hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-teal-500/10 dark:bg-neutral-800/50 rounded-full blur-2xl group-hover:bg-teal-500/20 dark:group-hover:bg-neutral-800 transition-all"></div>
-                        <div className="h-12 w-12 rounded-xl bg-teal-100 dark:bg-neutral-800 flex items-center justify-center text-teal-600 dark:text-neutral-300 mb-6 border border-teal-200/50 dark:border-neutral-700 shadow-inner">
+                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 dark:bg-neutral-800/50 rounded-full blur-2xl group-hover:bg-blue-500/20 dark:group-hover:bg-neutral-800 transition-all"></div>
+                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-neutral-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 border border-blue-200/50 dark:border-neutral-700 shadow-inner">
                             <Map className="w-6 h-6" />
                         </div>
                         <h3 className="text-xl font-bold text-blue-950 dark:text-neutral-100 mb-3">Pemetaan Geografis</h3>
@@ -98,7 +98,7 @@ export default function Welcome() {
                     {/* Feature 2 */}
                     <div className="group relative overflow-hidden rounded-2xl bg-white/60 dark:bg-neutral-900 p-8 border border-white/40 dark:border-neutral-800 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-none hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                         <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 dark:bg-neutral-800/50 rounded-full blur-2xl group-hover:bg-blue-500/20 dark:group-hover:bg-neutral-800 transition-all"></div>
-                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-neutral-800 flex items-center justify-center text-blue-600 dark:text-neutral-300 mb-6 border border-blue-200/50 dark:border-neutral-700 shadow-inner">
+                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-neutral-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 border border-blue-200/50 dark:border-neutral-700 shadow-inner">
                             <Activity className="w-6 h-6" />
                         </div>
                         <h3 className="text-xl font-bold text-blue-950 dark:text-neutral-100 mb-3">Monitoring Terpusat</h3>
@@ -109,8 +109,8 @@ export default function Welcome() {
 
                     {/* Feature 3 */}
                     <div className="group relative overflow-hidden rounded-2xl bg-white/60 dark:bg-neutral-900 p-8 border border-white/40 dark:border-neutral-800 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-none hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-cyan-500/10 dark:bg-neutral-800/50 rounded-full blur-2xl group-hover:bg-cyan-500/20 dark:group-hover:bg-neutral-800 transition-all"></div>
-                        <div className="h-12 w-12 rounded-xl bg-cyan-100 dark:bg-neutral-800 flex items-center justify-center text-cyan-600 dark:text-neutral-300 mb-6 border border-cyan-200/50 dark:border-neutral-700 shadow-inner">
+                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 dark:bg-neutral-800/50 rounded-full blur-2xl group-hover:bg-blue-500/20 dark:group-hover:bg-neutral-800 transition-all"></div>
+                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-neutral-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 border border-blue-200/50 dark:border-neutral-700 shadow-inner">
                             <FileSpreadsheet className="w-6 h-6" />
                         </div>
                         <h3 className="text-xl font-bold text-blue-950 dark:text-neutral-100 mb-3">Input Data Terstruktur</h3>

@@ -71,7 +71,7 @@ export default function AuthSplitLayout({
                     {/* 3 Modern Feature Cards */}
                     <div className="space-y-3.5">
                         <div className="flex items-start gap-3.5 p-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-md hover:bg-white/[0.07] transition-all">
-                            <div className="h-9 w-9 rounded-lg bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="h-9 w-9 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
                                 <MapPin className="h-4 w-4" />
                             </div>
                             <div>
@@ -95,7 +95,7 @@ export default function AuthSplitLayout({
                         </div>
 
                         <div className="flex items-start gap-3.5 p-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-md hover:bg-white/[0.07] transition-all">
-                            <div className="h-9 w-9 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="h-9 w-9 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
                                 <ShieldCheck className="h-4 w-4" />
                             </div>
                             <div>

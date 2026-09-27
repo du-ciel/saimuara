@@ -219,24 +219,24 @@ export default function InteractiveMap({
             {/* Top Toolbar / Header Details */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-xs text-blue-700 dark:text-blue-300 font-medium">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-300 font-medium">
                         <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                        <span><strong>{activeDaerahCount}</strong> / {mapData.length} Daerah Terdata</span>
+                        <span><strong className="text-slate-900 dark:text-white font-semibold">{activeDaerahCount}</strong> / {mapData.length} Daerah Terdata</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-900 text-xs text-indigo-700 dark:text-indigo-300 font-medium">
-                        <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                        <span><strong>{totalPokdakanAll}</strong> Pokdakan</span>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-300 font-medium">
+                        <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span><strong className="text-slate-900 dark:text-white font-semibold">{totalPokdakanAll}</strong> Pokdakan</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-900 text-xs text-teal-700 dark:text-teal-300 font-medium">
-                        <Cog className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                        <span><strong>{totalMesinAll}</strong> Mesin Pakan</span>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-300 font-medium">
+                        <Cog className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span><strong className="text-slate-900 dark:text-white font-semibold">{totalMesinAll}</strong> Mesin Pakan</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-900 text-xs text-cyan-700 dark:text-cyan-300 font-medium">
-                        <Waves className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                        <span><strong>{totalKolamAll}</strong> Kolam RAS</span>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-sm bg-white dark:bg-neutral-900 border border-slate-200/80 dark:border-neutral-800 text-xs text-slate-600 dark:text-neutral-300 font-medium">
+                        <Waves className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <span><strong className="text-slate-900 dark:text-white font-semibold">{totalKolamAll}</strong> Kolam RAS</span>
                     </div>
                 </div>
 
@@ -349,23 +349,23 @@ export default function InteractiveMap({
                                             </div>
 
                                             {/* Row 2: Mesin Pakan */}
-                                            <div className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-teal-50/80 dark:bg-teal-950/40 text-xs border border-teal-100/50 dark:border-teal-900/30">
+                                            <div className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 text-xs border border-blue-100/50 dark:border-blue-900/30">
                                                 <span className="flex items-center gap-1.5 text-slate-700 dark:text-neutral-300 font-medium">
-                                                    <Cog className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                                    <Cog className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                                     Mesin Pakan
                                                 </span>
-                                                <span className="font-bold text-teal-700 dark:text-teal-300">
+                                                <span className="font-bold text-blue-700 dark:text-blue-300">
                                                     {daerah.total_mesin_pakan} <span className="font-normal text-[10px] text-slate-500 dark:text-neutral-400">Unit</span>
                                                 </span>
                                             </div>
 
                                             {/* Row 3: Kolam RAS */}
-                                            <div className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-cyan-50/80 dark:bg-cyan-950/40 text-xs border border-cyan-100/50 dark:border-cyan-900/30">
+                                            <div className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 text-xs border border-blue-100/50 dark:border-blue-900/30">
                                                 <span className="flex items-center gap-1.5 text-slate-700 dark:text-neutral-300 font-medium">
-                                                    <Waves className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                                                    <Waves className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                                     Kolam RAS
                                                 </span>
-                                                <span className="font-bold text-cyan-700 dark:text-cyan-300">
+                                                <span className="font-bold text-blue-700 dark:text-blue-300">
                                                     {daerah.total_kolam_ras} <span className="font-normal text-[10px] text-slate-500 dark:text-neutral-400">Unit</span>
                                                 </span>
                                             </div>
@@ -432,10 +432,10 @@ export default function InteractiveMap({
                                             {p.pekon_desa}, {p.kecamatan}, {p.kabupaten_kota}
                                         </div>
                                         <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                                            <div className="bg-teal-50 dark:bg-teal-950/40 p-1 rounded text-teal-700 dark:text-teal-300 font-medium">
+                                            <div className="bg-blue-50 dark:bg-blue-950/40 p-1 rounded text-blue-700 dark:text-blue-300 font-medium">
                                                 Mesin: {p.jumlah_mesin_pakan} Unit
                                             </div>
-                                            <div className="bg-cyan-50 dark:bg-cyan-950/40 p-1 rounded text-cyan-700 dark:text-cyan-300 font-medium">
+                                            <div className="bg-blue-50 dark:bg-blue-950/40 p-1 rounded text-blue-700 dark:text-blue-300 font-medium">
                                                 RAS: {p.jumlah_kolam_ras} Unit
                                             </div>
                                         </div>

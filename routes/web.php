@@ -18,8 +18,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Admin Management (Khusus Admin Provinsi)
     Route::get('/admin/users', [App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.users.index');
+    Route::post('/admin/users', [App\Http\Controllers\AdminUserController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{user}', [App\Http\Controllers\AdminUserController::class, 'update'])->name('admin.users.update');
     Route::put('/admin/users/{user}/password', [App\Http\Controllers\AdminUserController::class, 'updatePassword'])->name('admin.users.password');
+    Route::delete('/admin/users/{user}', [App\Http\Controllers\AdminUserController::class, 'destroy'])->name('admin.users.destroy');
+
+    // Ekspor Data Laporan (Khusus Admin Provinsi)
+    Route::get('/admin/export/excel', [App\Http\Controllers\ExportController::class, 'exportExcel'])->name('admin.export.excel');
+    Route::get('/admin/export/pdf', [App\Http\Controllers\ExportController::class, 'exportPdf'])->name('admin.export.pdf');
 
     // Manajemen Laporan (Admin Provinsi & Admin Kabupaten)
     Route::put('/admin/laporan/mesin/{laporanMesin}', [App\Http\Controllers\AdminLaporanController::class, 'updateMesin'])->name('admin.laporan.mesin.update');

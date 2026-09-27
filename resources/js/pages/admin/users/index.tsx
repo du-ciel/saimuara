@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -12,8 +13,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Edit2, KeyRound } from 'lucide-react';
+import { Edit2, KeyRound, UserPlus, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
+import { toast } from 'sonner';
 
 interface User {
     id: number;
@@ -25,6 +27,7 @@ interface User {
 
 interface PageProps {
     adminUsers: User[];
+    listKabupaten?: string[];
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -34,9 +37,26 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function AdminUsersIndex({ adminUsers }: PageProps) {
+const DEFAULT_KABUPATEN = [
+    'Lampung Barat', 'Tanggamus', 'Lampung Selatan', 'Lampung Timur', 
+    'Lampung Tengah', 'Lampung Utara', 'Way Kanan', 'Tulang Bawang', 
+    'Pesawaran', 'Pringsewu', 'Mesuji', 'Tulang Bawang Barat', 
+    'Pesisir Barat', 'Bandar Lampung', 'Metro'
+];
+
+export default function AdminUsersIndex({ adminUsers, listKabupaten = DEFAULT_KABUPATEN }: PageProps) {
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editUser, setEditUser] = useState<User | null>(null);
     const [passwordUser, setPasswordUser] = useState<User | null>(null);
+    const [deleteUser, setDeleteUser] = useState<User | null>(null);
+
+    const createForm = useForm({
+        name: '',
+        email: '',
+        kabupaten: '',
+        password: '',
+        password_confirmation: '',
+    });
 
     const editForm = useForm({
         email: '',
@@ -47,6 +67,28 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
         password: '',
         password_confirmation: '',
     });
+
+    const handleKabupatenSelect = (kab: string) => {
+        createForm.setData({
+            ...createForm.data,
+            kabupaten: kab,
+            name: createForm.data.name || `Admin Kab. ${kab}`,
+        });
+    };
+
+    const submitCreate = (e: React.FormEvent) => {
+        e.preventDefault();
+        createForm.post('/admin/users', {
+            onSuccess: () => {
+                setIsCreateOpen(false);
+                createForm.reset();
+                toast.success('Admin Kabupaten berhasil ditambahkan.');
+            },
+            onError: () => {
+                toast.error('Gagal menambahkan admin. Silakan periksa isian form.');
+            }
+        });
+    };
 
     const openEditModal = (user: User) => {
         setEditUser(user);
@@ -71,7 +113,10 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
         if (!editUser) return;
 
         editForm.put(`/admin/users/${editUser.id}`, {
-            onSuccess: () => setEditUser(null),
+            onSuccess: () => {
+                setEditUser(null);
+                toast.success('Profil admin berhasil diperbarui.');
+            },
         });
     };
 
@@ -80,7 +125,21 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
         if (!passwordUser) return;
 
         passwordForm.put(`/admin/users/${passwordUser.id}/password`, {
-            onSuccess: () => setPasswordUser(null),
+            onSuccess: () => {
+                setPasswordUser(null);
+                toast.success('Kata sandi berhasil direset.');
+            },
+        });
+    };
+
+    const confirmDelete = () => {
+        if (!deleteUser) return;
+
+        router.delete(`/admin/users/${deleteUser.id}`, {
+            onSuccess: () => {
+                setDeleteUser(null);
+                toast.success('Admin Kabupaten berhasil dihapus.');
+            },
         });
     };
 
@@ -91,13 +150,28 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
                 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-blue-950 dark:text-blue-50">
-                            Kelola Admin Kabupaten
-                        </h1>
-                        <p className="text-slate-500 dark:text-neutral-400 mt-1">
-                            Manajemen akun admin kabupaten (Ubah Email / Reset Sandi).
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-blue-950 dark:text-blue-50">
+                                Kelola Admin Kabupaten
+                            </h1>
+                        </div>
+                        <p className="text-slate-500 dark:text-neutral-400 mt-1 text-sm">
+                            Manajemen terpusat akun resmi admin kabupaten se-Provinsi Lampung. Registrasi publik dinonaktifkan untuk keamanan.
                         </p>
                     </div>
+
+                    <Button
+                        type="button"
+                        onClick={() => {
+                            createForm.reset();
+                            setIsCreateOpen(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-sm rounded-xl cursor-pointer"
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        Tambah Admin Baru
+                    </Button>
                 </div>
 
                 <div className="rounded-xl border border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-xl dark:bg-neutral-900/70 dark:border-neutral-800/60 overflow-hidden">
@@ -118,17 +192,22 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
                                             {user.name}
                                         </td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-neutral-300">
-                                            {user.kabupaten || '-'}
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/50">
+                                                {user.kabupaten || '-'}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 text-slate-600 dark:text-neutral-300">
                                             {user.email}
                                         </td>
                                         <td className="px-6 py-4 text-right space-x-2">
-                                            <Button variant="outline" size="sm" onClick={() => openEditModal(user)}>
-                                                <Edit2 className="w-4 h-4 mr-1" /> Edit
+                                            <Button variant="outline" size="sm" onClick={() => openEditModal(user)} className="cursor-pointer">
+                                                <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
                                             </Button>
-                                            <Button variant="outline" size="sm" onClick={() => openPasswordModal(user)}>
-                                                <KeyRound className="w-4 h-4 mr-1" /> Reset Sandi
+                                            <Button variant="outline" size="sm" onClick={() => openPasswordModal(user)} className="cursor-pointer">
+                                                <KeyRound className="w-3.5 h-3.5 mr-1" /> Reset Sandi
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => setDeleteUser(user)} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer">
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
                                         </td>
                                     </tr>
@@ -136,7 +215,7 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
                                 {adminUsers.length === 0 && (
                                     <tr>
                                         <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-neutral-500">
-                                            Belum ada data admin kabupaten.
+                                            Belum ada akun admin kabupaten terdaftar. Klik tombol di atas untuk menambahkan.
                                         </td>
                                     </tr>
                                 )}
@@ -145,6 +224,94 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Modal Tambah Admin Baru */}
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <UserPlus className="h-5 w-5 text-blue-600" />
+                            Tambah Admin Kabupaten
+                        </DialogTitle>
+                        <DialogDescription>
+                            Daftarkan akun admin baru untuk perwakilan dinas perikanan kabupaten/kota.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={submitCreate} className="space-y-3.5">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="create-kabupaten">Pilih Wilayah Kabupaten *</Label>
+                            <Select value={createForm.data.kabupaten} onValueChange={handleKabupatenSelect}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Pilih Kabupaten / Kota" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {listKabupaten.map((kab) => (
+                                        <SelectItem key={kab} value={kab}>{kab}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {createForm.errors.kabupaten && <p className="text-xs text-red-500">{createForm.errors.kabupaten}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="create-name">Nama Akun *</Label>
+                            <Input
+                                id="create-name"
+                                value={createForm.data.name}
+                                onChange={(e) => createForm.setData('name', e.target.value)}
+                                placeholder="Admin Kab. ..."
+                                required
+                            />
+                            {createForm.errors.name && <p className="text-xs text-red-500">{createForm.errors.name}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="create-email">Alamat Email *</Label>
+                            <Input
+                                id="create-email"
+                                type="email"
+                                value={createForm.data.email}
+                                onChange={(e) => createForm.setData('email', e.target.value)}
+                                placeholder="admin@dkp.lampung.go.id"
+                                required
+                            />
+                            {createForm.errors.email && <p className="text-xs text-red-500">{createForm.errors.email}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="create-password">Kata Sandi *</Label>
+                            <Input
+                                id="create-password"
+                                type="password"
+                                value={createForm.data.password}
+                                onChange={(e) => createForm.setData('password', e.target.value)}
+                                placeholder="Minimal 8 karakter"
+                                required
+                            />
+                            {createForm.errors.password && <p className="text-xs text-red-500">{createForm.errors.password}</p>}
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="create-password-confirmation">Konfirmasi Kata Sandi *</Label>
+                            <Input
+                                id="create-password-confirmation"
+                                type="password"
+                                value={createForm.data.password_confirmation}
+                                onChange={(e) => createForm.setData('password_confirmation', e.target.value)}
+                                placeholder="Ketik ulang kata sandi"
+                                required
+                            />
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Batal</Button>
+                            <Button type="submit" disabled={createForm.processing} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                {createForm.processing ? 'Menyimpan...' : 'Simpan Admin'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Modal Edit Profil */}
             <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
@@ -217,6 +384,27 @@ export default function AdminUsersIndex({ adminUsers }: PageProps) {
                             <Button type="submit" disabled={passwordForm.processing}>Simpan Kata Sandi</Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal Konfirmasi Hapus */}
+            <Dialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-rose-600">
+                            <AlertTriangle className="h-5 w-5" />
+                            Hapus Akun Admin?
+                        </DialogTitle>
+                        <DialogDescription>
+                            Akun <strong>{deleteUser?.name}</strong> ({deleteUser?.email}) akan dihapus secara permanen dari sistem.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                        <Button type="button" variant="outline" onClick={() => setDeleteUser(null)}>Batal</Button>
+                        <Button type="button" variant="destructive" onClick={confirmDelete}>
+                            Ya, Hapus
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </>

@@ -161,7 +161,7 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Features::registration(), // Dinonaktifkan untuk mencegah registrasi admin publik oleh pihak luar
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

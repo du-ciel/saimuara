@@ -7,6 +7,14 @@ import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+
+const certFile = path.join(os.homedir(), '.local/share/lerd/certs/sites/saimuara.test.crt');
+const keyFile = path.join(os.homedir(), '.local/share/lerd/certs/sites/saimuara.test.key');
+const hasLerdCert = fs.existsSync(certFile) && fs.existsSync(keyFile);
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
@@ -29,6 +37,14 @@ export default defineConfig({
         })]),
     ]),
     server: {
+        host: hasLerdCert ? 'saimuara.test' : undefined,
+        https: hasLerdCert
+            ? {
+                  key: fs.readFileSync(keyFile),
+                  cert: fs.readFileSync(certFile),
+              }
+            : undefined,
+        cors: true,
         watch: {
             ignored: [
                 '**/.agents/**',

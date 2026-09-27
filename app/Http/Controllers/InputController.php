@@ -14,15 +14,11 @@ class InputController extends Controller
     {
         $user = $request->user();
 
-        // Admin Provinsi is not supposed to input data, redirect them or show error, but we'll let them see for now
-        // For admin kabupaten, fetch their pokdakans
-        $pokdakans = Pokdakan::where('kabupaten_kota', $user->kabupaten)
-            ->orWhere('user_id', $user->id) // Fallback for prov
-            ->get();
-
-        if ($user->role === 'admin_provinsi') {
-            $pokdakans = Pokdakan::all();
+        if ($user->role !== 'admin_kabupaten') {
+            abort(403, 'Akses dibatasi. Menu penginputan data hanya untuk Admin Kabupaten.');
         }
+
+        $pokdakans = Pokdakan::where('kabupaten_kota', $user->kabupaten)->get();
 
         return Inertia::render('input/index', [
             'pokdakans' => $pokdakans,
@@ -33,6 +29,11 @@ class InputController extends Controller
 
     public function storePokdakan(Request $request)
     {
+        $user = $request->user();
+        if ($user->role !== 'admin_kabupaten') {
+            abort(403, 'Akses dibatasi. Penginputan Pokdakan hanya untuk Admin Kabupaten.');
+        }
+
         $request->validate([
             'nama_pokdakan' => 'required|string|max:255',
             'nama_ketua' => 'required|string|max:255',
@@ -48,8 +49,6 @@ class InputController extends Controller
             'jumlah_kolam_ras' => 'required|integer|min:0',
             'spesifikasi_kolam' => 'nullable|string',
         ]);
-
-        $user = $request->user();
 
         Pokdakan::create([
             'user_id' => $user->id,
@@ -74,6 +73,11 @@ class InputController extends Controller
 
     public function storeLaporanMesin(Request $request)
     {
+        $user = $request->user();
+        if ($user->role !== 'admin_kabupaten') {
+            abort(403, 'Akses dibatasi. Penginputan Laporan Mesin hanya untuk Admin Kabupaten.');
+        }
+
         $request->validate([
             'pokdakan_id' => 'required|exists:pokdakans,id',
             'tanggal_input' => 'required|date',
@@ -91,6 +95,11 @@ class InputController extends Controller
 
     public function storeLaporanRas(Request $request)
     {
+        $user = $request->user();
+        if ($user->role !== 'admin_kabupaten') {
+            abort(403, 'Akses dibatasi. Penginputan Laporan RAS hanya untuk Admin Kabupaten.');
+        }
+
         $request->validate([
             'pokdakan_id' => 'required|exists:pokdakans,id',
             'tanggal_input' => 'required|date',

@@ -1,10 +1,10 @@
 import { Head, router } from '@inertiajs/react';
 import { dashboard } from '@/routes';
 import { useState } from 'react';
-import { 
-    Users, Settings, ArrowRight, Waves, FileText, FileSearch, Scale, Search, Filter, Cog, MapPin, Phone, Building2,
+import {
+    Users, Settings, ArrowRight, Waves, FileText, FileSearch, Search, Filter, Cog, MapPin, Phone, Building2,
     Fish, CheckCircle2, XCircle, PackageCheck, AlertTriangle, TrendingUp, Layers, Activity, RotateCcw,
-    LayoutGrid, Table2, Calendar, Pencil, Trash2, History, Clock
+    LayoutGrid, Table2, Calendar, Pencil, Trash2, History, Clock, FileDown, FileSpreadsheet, Printer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,18 +16,9 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
 import InteractiveMap, { DaerahMapItem } from '@/components/interactive-map';
 
 interface PokdakanPerubahanItem {
@@ -156,9 +147,8 @@ interface Props {
 
 export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_ras, chartData, mapData, role, user_kabupaten, filters, list_kabupaten, pending_pokdakan_requests = [] }: Props) {
     const [activeTab, setActiveTab] = useState<'pokdakan' | 'mesin' | 'ras'>('pokdakan');
-    const [viewMode, setViewMode] = useState<'map' | 'chart'>('map');
     const [pokdakanViewMode, setPokdakanViewMode] = useState<'card' | 'table'>('card');
-    
+
     // Filter States
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [selectedKabupaten, setSelectedKabupaten] = useState(filters.kabupaten || 'semua');
@@ -167,6 +157,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
     // Dialog States
     const [selectedPokdakan, setSelectedPokdakan] = useState<Pokdakan | null>(null);
     const [isPokdakanListModalOpen, setIsPokdakanListModalOpen] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [selectedLaporanMesin, setSelectedLaporanMesin] = useState<LaporanMesin | null>(null);
     const [selectedLaporanRas, setSelectedLaporanRas] = useState<LaporanRas | null>(null);
 
@@ -550,32 +541,42 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             Dashboard Pemantauan
                         </h1>
                         <p className="text-slate-500 dark:text-neutral-400 mt-1">
-                            {role === 'admin_provinsi' 
-                                ? 'Memantau data program pakan mandiri dan kolam RAS dari seluruh Kabupaten di Provinsi Lampung.' 
+                            {role === 'admin_provinsi'
+                                ? 'Memantau data program pakan mandiri dan kolam RAS dari seluruh Kabupaten di Provinsi Lampung.'
                                 : `Memantau data program khusus untuk Kabupaten ${user_kabupaten}.`}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
                         {role === 'admin_provinsi' && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setIsApprovalModalOpen(true)}
-                                className={`relative h-10 px-4 text-xs font-semibold rounded-xl flex items-center gap-2 transition-all cursor-pointer ${
-                                    (pending_pokdakan_requests && pending_pokdakan_requests.length > 0)
-                                        ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-500/25 shadow-xs'
-                                        : 'bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50'
-                                }`}
-                            >
-                                <CheckCircle2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                                <span>Persetujuan Pokdakan</span>
-                                {pending_pokdakan_requests && pending_pokdakan_requests.length > 0 && (
-                                    <span className="ml-1 px-2 py-0.5 text-[11px] font-bold bg-amber-600 text-white rounded-full animate-pulse">
-                                        {pending_pokdakan_requests.length}
-                                    </span>
-                                )}
-                            </Button>
+                            <>
+                                <Button
+                                    type="button"
+                                    onClick={() => setIsExportModalOpen(true)}
+                                    className="h-10 px-4 text-xs font-bold rounded-xl flex items-center gap-2 bg-white dark:bg-neutral-900 text-slate-800 dark:text-neutral-100 border border-slate-200/90 dark:border-neutral-800 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
+                                >
+                                    <FileDown className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Export Laporan</span>
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsApprovalModalOpen(true)}
+                                    className={`relative h-10 px-4 text-xs font-bold rounded-xl flex items-center gap-2 transition-all duration-200 cursor-pointer ${(pending_pokdakan_requests && pending_pokdakan_requests.length > 0)
+                                        ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700 hover:bg-amber-500/25 shadow-xs hover:shadow-md hover:-translate-y-0.5'
+                                        : 'bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-neutral-800 shadow-xs hover:shadow-md hover:-translate-y-0.5'
+                                        }`}
+                                >
+                                    <CheckCircle2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    <span>Persetujuan Pokdakan</span>
+                                    {pending_pokdakan_requests && pending_pokdakan_requests.length > 0 && (
+                                        <span className="ml-1 px-2 py-0.5 text-[11px] font-bold bg-amber-600 text-white rounded-full animate-pulse">
+                                            {pending_pokdakan_requests.length}
+                                        </span>
+                                    )}
+                                </Button>
+                            </>
                         )}
                         {role === 'admin_kabupaten' && pending_pokdakan_requests && pending_pokdakan_requests.length > 0 && (
                             <Button
@@ -654,7 +655,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                     >
                         <Users className="h-4 w-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
                         <span>{formatNumber(summary.total_pokdakan)} Pokdakan Terdaftar</span>
-                        <span className="text-[10px] bg-blue-600 text-white rounded-full px-2 py-0.5 ml-1 font-medium group-hover:bg-blue-700 transition-colors inline-flex items-center gap-0.5 shadow-2xs">
+                        <span className="m-2 text-[10px] bg-blue-600 text-white rounded-full px-2 py-1 ml-1 font-medium group-hover:bg-blue-700 transition-colors inline-flex items-center gap-0.5 shadow-2xs">
                             Lihat Card &rarr;
                         </span>
                     </button>
@@ -666,7 +667,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         <div className="flex items-center gap-2">
                             <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             <h2 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                                Statistik Operasional & Produksi
+                                Produksi & Aktivitas
                             </h2>
                             <span className="text-xs text-slate-500 dark:text-neutral-400 hidden sm:inline">
                                 &bull; {selectedKabupaten && selectedKabupaten !== 'semua' ? selectedKabupaten : 'Seluruh Lampung'}
@@ -686,11 +687,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                     key={item.id}
                                     type="button"
                                     onClick={() => handlePeriodChange(item.id)}
-                                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
-                                        selectedPeriod === item.id
-                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400 font-semibold'
-                                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
-                                    }`}
+                                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${selectedPeriod === item.id
+                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400 font-semibold'
+                                        : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
+                                        }`}
                                 >
                                     {item.label}
                                 </button>
@@ -705,7 +705,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                                     Mesin Pakan
                                 </span>
-                                <div className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400 flex items-center justify-center">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400 flex items-center justify-center">
                                     <Cog className="h-4 w-4" />
                                 </div>
                             </div>
@@ -733,7 +733,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                                     Kolam RAS
                                 </span>
-                                <div className="h-8 w-8 rounded-lg bg-cyan-500/10 text-cyan-600 dark:bg-cyan-400/10 dark:text-cyan-400 flex items-center justify-center">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400 flex items-center justify-center">
                                     <Waves className="h-4 w-4" />
                                 </div>
                             </div>
@@ -785,7 +785,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                                     Produksi RAS
                                 </span>
-                                <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400 flex items-center justify-center">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400 flex items-center justify-center">
                                     <Layers className="h-4 w-4" />
                                 </div>
                             </div>
@@ -809,7 +809,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                                     Produksi Ikan
                                 </span>
-                                <div className="h-8 w-8 rounded-lg bg-teal-500/10 text-teal-600 dark:bg-teal-400/10 dark:text-teal-400 flex items-center justify-center">
+                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400 flex items-center justify-center">
                                     <Fish className="h-4 w-4" />
                                 </div>
                             </div>
@@ -844,93 +844,45 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             </p>
                         </div>
 
-                        {/* View Switcher: Peta Interaktif & Grafik Perbandingan */}
-                        <div className="flex items-center rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800 border border-slate-200/50 dark:border-neutral-700/50">
-                            <button
-                                type="button"
-                                onClick={() => setViewMode('map')}
-                                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                                    viewMode === 'map'
-                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400'
-                                        : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
-                                }`}
-                            >
-                                <MapPin className="h-3.5 w-3.5" />
-                                Peta Interaktif
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setViewMode('chart')}
-                                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                                    viewMode === 'chart'
-                                        ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400'
-                                        : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
-                                }`}
-                            >
-                                <Scale className="h-3.5 w-3.5" />
-                                Grafik Perbandingan
-                            </button>
-                        </div>
                     </div>
 
-                    {viewMode === 'map' ? (
-                        <InteractiveMap
-                            mapData={mapData || []}
-                            pokdakans={pokdakans}
-                            selectedKabupaten={selectedKabupaten}
-                            onSelectKabupaten={handleKabupatenChange}
-                            role={role}
-                        />
-                    ) : (
-                        <div className="h-80 w-full pt-2">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
-                                    <XAxis dataKey="name" tick={{ fill: '#737373' }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fill: '#737373' }} axisLine={false} tickLine={false} />
-                                    <Tooltip 
-                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        cursor={{ fill: 'transparent' }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                    <Bar dataKey="Total Laporan" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
+                    <InteractiveMap
+                        mapData={mapData || []}
+                        pokdakans={pokdakans}
+                        selectedKabupaten={selectedKabupaten}
+                        onSelectKabupaten={handleKabupatenChange}
+                        role={role}
+                    />
                 </div>
 
                 {/* TABS MENU */}
                 <div className="flex space-x-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800 md:w-max">
                     <button
                         onClick={() => setActiveTab('pokdakan')}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                            activeTab === 'pokdakan'
-                                ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
-                                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
-                        }`}
+                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'pokdakan'
+                            ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
+                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
+                            }`}
                     >
                         <Building2 className="h-4 w-4" />
                         Profil Penerima Bantuan
                     </button>
                     <button
                         onClick={() => setActiveTab('mesin')}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                            activeTab === 'mesin'
-                                ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
-                                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
-                        }`}
+                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'mesin'
+                            ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
+                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
+                            }`}
                     >
                         <Cog className="h-4 w-4" />
                         Laporan Mesin Pakan
                     </button>
                     <button
                         onClick={() => setActiveTab('ras')}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                            activeTab === 'ras'
-                                ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
-                                : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
-                        }`}
+                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${activeTab === 'ras'
+                            ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-950 dark:text-neutral-50'
+                            : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-50'
+                            }`}
                     >
                         <Waves className="h-4 w-4" />
                         Laporan Kolam RAS
@@ -939,7 +891,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
 
                 {/* CONTENT AREA */}
                 <div id="section-pokdakan" className="rounded-xl border border-slate-200/60 bg-white/70 shadow-sm backdrop-blur-xl dark:bg-neutral-900/70 dark:border-neutral-800/60 overflow-hidden">
-                    
+
                     {/* TAB: POKDAKAN */}
                     {activeTab === 'pokdakan' && (
                         <div>
@@ -964,11 +916,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                     <button
                                         type="button"
                                         onClick={() => setPokdakanViewMode('card')}
-                                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                                            pokdakanViewMode === 'card'
-                                                ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400 font-semibold'
-                                                : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
-                                        }`}
+                                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${pokdakanViewMode === 'card'
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400 font-semibold'
+                                            : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
+                                            }`}
                                     >
                                         <LayoutGrid className="h-3.5 w-3.5" />
                                         Daftar Card
@@ -976,11 +927,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                     <button
                                         type="button"
                                         onClick={() => setPokdakanViewMode('table')}
-                                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                                            pokdakanViewMode === 'table'
-                                                ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400 font-semibold'
-                                                : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
-                                        }`}
+                                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${pokdakanViewMode === 'table'
+                                            ? 'bg-white text-blue-600 shadow-sm dark:bg-neutral-950 dark:text-blue-400 font-semibold'
+                                            : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200'
+                                            }`}
                                     >
                                         <Table2 className="h-3.5 w-3.5" />
                                         Tabel
@@ -1061,19 +1011,19 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
 
                                                 {/* Rincian Bantuan (Mesin & Kolam) */}
                                                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                                                    <div className="bg-amber-50/80 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-900/30">
-                                                        <div className="flex items-center justify-between font-semibold text-amber-900 dark:text-amber-300 text-[11px]">
-                                                            <span className="flex items-center gap-1"><Cog className="h-3.5 w-3.5 text-amber-600" /> Mesin</span>
-                                                            <span className="font-bold text-amber-700 dark:text-amber-400">{p.jumlah_mesin_pakan} Unit</span>
+                                                    <div className="bg-blue-50/70 dark:bg-blue-950/30 p-2.5 rounded-lg border border-blue-200/50 dark:border-blue-900/30">
+                                                        <div className="flex items-center justify-between font-semibold text-blue-950 dark:text-blue-200 text-[11px]">
+                                                            <span className="flex items-center gap-1"><Cog className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> Mesin</span>
+                                                            <span className="font-bold text-blue-700 dark:text-blue-400">{p.jumlah_mesin_pakan} Unit</span>
                                                         </div>
                                                         <div className="text-[10px] text-slate-500 dark:text-neutral-400 mt-1 truncate" title={p.spesifikasi_mesin}>
                                                             {p.spesifikasi_mesin || 'Mesin Pakan Mandiri'}
                                                         </div>
                                                     </div>
-                                                    <div className="bg-cyan-50/80 dark:bg-cyan-950/30 p-2.5 rounded-lg border border-cyan-200/50 dark:border-cyan-900/30">
-                                                        <div className="flex items-center justify-between font-semibold text-cyan-900 dark:text-cyan-300 text-[11px]">
-                                                            <span className="flex items-center gap-1"><Waves className="h-3.5 w-3.5 text-cyan-600" /> Kolam</span>
-                                                            <span className="font-bold text-cyan-700 dark:text-cyan-400">{p.jumlah_kolam_ras} Unit</span>
+                                                    <div className="bg-blue-50/70 dark:bg-blue-950/30 p-2.5 rounded-lg border border-blue-200/50 dark:border-blue-900/30">
+                                                        <div className="flex items-center justify-between font-semibold text-blue-950 dark:text-blue-200 text-[11px]">
+                                                            <span className="flex items-center gap-1"><Waves className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> Kolam</span>
+                                                            <span className="font-bold text-blue-700 dark:text-blue-400">{p.jumlah_kolam_ras} Unit</span>
                                                         </div>
                                                         <div className="text-[10px] text-slate-500 dark:text-neutral-400 mt-1 truncate" title={p.spesifikasi_kolam}>
                                                             {p.spesifikasi_kolam || 'Kolam Bioflok RAS'}
@@ -1133,8 +1083,8 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                         </thead>
                                         <tbody>
                                             {pokdakans.map((p) => (
-                                                <tr 
-                                                    key={p.id} 
+                                                <tr
+                                                    key={p.id}
                                                     className="border-b border-sidebar-border hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer"
                                                     onClick={() => setSelectedPokdakan(p)}
                                                 >
@@ -1161,10 +1111,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-center font-semibold text-orange-600">
+                                                    <td className="px-6 py-4 text-center font-semibold text-blue-600 dark:text-blue-400">
                                                         {p.jumlah_mesin_pakan} Unit
                                                     </td>
-                                                    <td className="px-6 py-4 text-center font-semibold text-cyan-600">
+                                                    <td className="px-6 py-4 text-center font-semibold text-blue-600 dark:text-blue-400">
                                                         {p.jumlah_kolam_ras} Unit
                                                     </td>
                                                     {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && p.kabupaten_kota === user_kabupaten)) && (
@@ -1222,8 +1172,8 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 </thead>
                                 <tbody>
                                     {laporan_mesin.map((lm) => (
-                                        <tr 
-                                            key={lm.id} 
+                                        <tr
+                                            key={lm.id}
                                             className="border-b border-sidebar-border hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer"
                                             onClick={() => setSelectedLaporanMesin(lm)}
                                         >
@@ -1250,10 +1200,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    lm.status_mesin.toLowerCase().includes('baik') ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${lm.status_mesin.toLowerCase().includes('baik') ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                                                     'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                                }`}>
+                                                    }`}>
                                                     {lm.status_mesin}
                                                 </span>
                                             </td>
@@ -1329,8 +1278,8 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 </thead>
                                 <tbody>
                                     {laporan_ras.map((lr) => (
-                                        <tr 
-                                            key={lr.id} 
+                                        <tr
+                                            key={lr.id}
                                             className="border-b border-sidebar-border hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer"
                                             onClick={() => setSelectedLaporanRas(lr)}
                                         >
@@ -1358,10 +1307,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    lr.status_siklus.toLowerCase() === 'panen' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${lr.status_siklus.toLowerCase() === 'panen' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                                                     'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                }`}>
+                                                    }`}>
                                                     {lr.status_siklus}
                                                 </span>
                                                 <div className="mt-2 text-xs font-medium">Ikan {lr.komoditas_ikan}</div>
@@ -1434,9 +1382,9 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             <div>
                                 <DialogTitle className="flex items-center gap-2 text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
                                     <Users className="h-6 w-6 text-blue-600" />
-                                    Daftar Pokdakan Terdaftar ({pokdakans.length} Kelompok)
+                                    Daftar Pokdakan Yang Telah Terdaftar ({pokdakans.length} Kelompok)
                                 </DialogTitle>
-                                <DialogDescription className="mt-1.5 text-xs md:text-sm text-slate-500 dark:text-neutral-400">
+                                <DialogDescription className="mt-1.5 text-xs md:text-sm text-slate-500 dark:text-neutral-400 p-1">
                                     {selectedKabupaten && selectedKabupaten !== 'semua'
                                         ? `Kelompok pembudidaya ikan di wilayah ${selectedKabupaten}`
                                         : 'Seluruh kelompok pembudidaya ikan terdaftar di Provinsi Lampung'}
@@ -1503,10 +1451,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
 
                                     {/* Rincian Aset Bantuan */}
                                     <div className="grid grid-cols-2 gap-2.5 text-xs">
-                                        <div className="bg-amber-50/90 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200/60 dark:border-amber-900/40 flex flex-col justify-between">
-                                            <div className="flex items-center justify-between font-semibold text-amber-900 dark:text-amber-200 text-xs">
-                                                <span className="flex items-center gap-1.5"><Cog className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Mesin</span>
-                                                <span className="font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-900/50 px-1.5 py-0.5 rounded text-[11px]">
+                                        <div className="bg-blue-50/80 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200/60 dark:border-blue-900/40 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between font-semibold text-blue-950 dark:text-blue-200 text-xs">
+                                                <span className="flex items-center gap-1.5"><Cog className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> Mesin</span>
+                                                <span className="font-bold text-blue-700 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/50 px-1.5 py-0.5 rounded text-[11px]">
                                                     {p.jumlah_mesin_pakan} Unit
                                                 </span>
                                             </div>
@@ -1514,10 +1462,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                                 {p.spesifikasi_mesin || 'Standar operasional'}
                                             </div>
                                         </div>
-                                        <div className="bg-cyan-50/90 dark:bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-200/60 dark:border-cyan-900/40 flex flex-col justify-between">
-                                            <div className="flex items-center justify-between font-semibold text-cyan-900 dark:text-cyan-200 text-xs">
-                                                <span className="flex items-center gap-1.5"><Waves className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" /> Kolam</span>
-                                                <span className="font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-100/80 dark:bg-cyan-900/50 px-1.5 py-0.5 rounded text-[11px]">
+                                        <div className="bg-blue-50/80 dark:bg-blue-950/40 p-2.5 rounded-xl border border-blue-200/60 dark:border-blue-900/40 flex flex-col justify-between">
+                                            <div className="flex items-center justify-between font-semibold text-blue-950 dark:text-blue-200 text-xs">
+                                                <span className="flex items-center gap-1.5"><Waves className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" /> Kolam</span>
+                                                <span className="font-bold text-blue-700 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/50 px-1.5 py-0.5 rounded text-[11px]">
                                                     {p.jumlah_kolam_ras} Unit
                                                 </span>
                                             </div>
@@ -1618,11 +1566,11 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             </div>
                             <div className="grid grid-cols-3 gap-2 border-b pb-2">
                                 <span className="text-neutral-500">Bantuan Mesin</span>
-                                <span className="col-span-2 font-medium text-orange-600">{selectedPokdakan.jumlah_mesin_pakan} Unit - {selectedPokdakan.spesifikasi_mesin}</span>
+                                <span className="col-span-2 font-medium text-blue-600 dark:text-blue-400">{selectedPokdakan.jumlah_mesin_pakan} Unit - {selectedPokdakan.spesifikasi_mesin}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2 pb-2">
                                 <span className="text-neutral-500">Bantuan RAS</span>
-                                <span className="col-span-2 font-medium text-cyan-600">{selectedPokdakan.jumlah_kolam_ras} Unit - {selectedPokdakan.spesifikasi_kolam}</span>
+                                <span className="col-span-2 font-medium text-blue-600 dark:text-blue-400">{selectedPokdakan.jumlah_kolam_ras} Unit - {selectedPokdakan.spesifikasi_kolam}</span>
                             </div>
 
                             {(role === 'admin_provinsi' || (role === 'admin_kabupaten' && selectedPokdakan.kabupaten_kota === user_kabupaten)) && (
@@ -2107,7 +2055,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                         {/* Rincian Panen */}
                         <div className="bg-slate-50 dark:bg-neutral-800/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-neutral-700/80 space-y-3">
                             <div className="text-xs font-bold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
-                                <Fish className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                                <Fish className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 Rincian Panen & Pendapatan (Diisi jika sudah / sedang panen)
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -2266,7 +2214,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                     <div key={item.id || idx} className="relative pl-6">
                                         {/* Marker bullet */}
                                         <div className="absolute -left-[9px] top-1.5 h-4 w-4 rounded-full bg-amber-500 border-2 border-white dark:border-neutral-900 shadow-xs" />
-                                        
+
                                         <div className="bg-slate-50 dark:bg-neutral-800/80 rounded-xl p-4 border border-slate-200/70 dark:border-neutral-700/70 space-y-3">
                                             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 dark:border-neutral-700/60 pb-2">
                                                 <div className="flex items-center gap-2">
@@ -2446,10 +2394,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1">
-                                    <Cog className="h-3.5 w-3.5 text-amber-600" />
+                                <label className="text-xs font-semibold text-blue-950 dark:text-blue-200 flex items-center gap-1">
+                                    <Cog className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                                     Jumlah Mesin Pakan (Unit) *
                                 </label>
                                 <Input
@@ -2462,7 +2410,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-amber-900 dark:text-amber-200">Spesifikasi Mesin Pakan</label>
+                                <label className="text-xs font-semibold text-blue-950 dark:text-blue-200">Spesifikasi Mesin Pakan</label>
                                 <Input
                                     type="text"
                                     value={editPokdakanForm.spesifikasi_mesin}
@@ -2473,10 +2421,10 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200/60 dark:border-cyan-900/40">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-cyan-900 dark:text-cyan-200 flex items-center gap-1">
-                                    <Waves className="h-3.5 w-3.5 text-cyan-600" />
+                                <label className="text-xs font-semibold text-blue-950 dark:text-blue-200 flex items-center gap-1">
+                                    <Waves className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                                     Jumlah Kolam RAS (Unit) *
                                 </label>
                                 <Input
@@ -2489,7 +2437,7 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-cyan-900 dark:text-cyan-200">Spesifikasi Kolam RAS</label>
+                                <label className="text-xs font-semibold text-blue-950 dark:text-blue-200">Spesifikasi Kolam RAS</label>
                                 <Input
                                     type="text"
                                     value={editPokdakanForm.spesifikasi_kolam}
@@ -2755,6 +2703,100 @@ export default function Dashboard({ summary, pokdakans, laporan_mesin, laporan_r
                             Tutup
                         </Button>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal: Export Laporan (Khusus Admin Provinsi) */}
+            <Dialog open={isExportModalOpen} onOpenChange={setIsExportModalOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold text-blue-950 dark:text-blue-50">
+                            <FileDown className="h-6 w-6 text-emerald-600" />
+                            Export Laporan Rekapitulasi
+                        </DialogTitle>
+                        <DialogDescription className="text-xs md:text-sm">
+                            Unduh seluruh rekapitulasi data Pokdakan, Mesin Pakan, dan Kolam RAS dalam format Excel atau PDF siap cetak.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Filter info box */}
+                    <div className="bg-slate-50 dark:bg-neutral-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-neutral-800 text-xs space-y-1.5 shadow-2xs">
+                        <div className="font-bold text-slate-800 dark:text-neutral-200">Filter Aktif yang Diterapkan:</div>
+                        <div className="flex flex-wrap gap-2 text-slate-600 dark:text-neutral-300">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold border border-slate-200/70 dark:border-neutral-700 shadow-2xs">
+                                Wilayah: <strong className="ml-1 font-extrabold text-blue-600 dark:text-blue-400">{selectedKabupaten && selectedKabupaten !== 'semua' ? selectedKabupaten : 'Seluruh Provinsi Lampung'}</strong>
+                            </span>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-white dark:bg-neutral-800 text-slate-800 dark:text-slate-200 font-bold border border-slate-200/70 dark:border-neutral-700 shadow-2xs">
+                                Periode: <strong className="ml-1 font-extrabold text-emerald-600 dark:text-emerald-400">{selectedPeriod === 'semua' ? 'Semua Waktu' : selectedPeriod === 'hari' ? 'Hari Ini' : selectedPeriod === 'minggu' ? '7 Hari Terakhir' : selectedPeriod === 'bulan' ? 'Bulan Ini' : 'Tahun Ini'}</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Format options */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        {/* Opsi Excel */}
+                        <div className="group flex flex-col justify-between p-4.5 rounded-xl border border-slate-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                            <div>
+                                <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-sm">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                        <FileSpreadsheet className="h-4.5 w-4.5" />
+                                    </div>
+                                    <span>Microsoft Excel (.xlsx)</span>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-2.5 leading-relaxed">
+                                    Multi-sheet spreadsheet (Data Pokdakan, Laporan Mesin, Kolam RAS) lengkap dengan struktur tabel dan rumus data.
+                                </p>
+                            </div>
+                            <a
+                                href={`/admin/export/excel?kabupaten=${encodeURIComponent(selectedKabupaten)}&periode=${encodeURIComponent(selectedPeriod)}`}
+                                download
+                                className="mt-4.5 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150"
+                            >
+                                <FileDown className="h-4 w-4" />
+                                <span>Unduh File Excel</span>
+                            </a>
+                        </div>
+
+                        {/* Opsi PDF */}
+                        <div className="group flex flex-col justify-between p-4.5 rounded-xl border border-slate-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                            <div>
+                                <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-sm">
+                                    <div className="h-8 w-8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                        <FileText className="h-4.5 w-4.5" />
+                                    </div>
+                                    <span>Dokumen PDF (.pdf)</span>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-neutral-400 mt-2.5 leading-relaxed">
+                                    Format A4 Landscape resmi ber-Kop Dinas Kelautan & Perikanan Provinsi Lampung dengan lembar pengesahan tanda tangan.
+                                </p>
+                            </div>
+                            <div className="mt-4.5 flex flex-col gap-2">
+                                <a
+                                    href={`/admin/export/pdf?kabupaten=${encodeURIComponent(selectedKabupaten)}&periode=${encodeURIComponent(selectedPeriod)}`}
+                                    download
+                                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150"
+                                >
+                                    <FileDown className="h-4 w-4" />
+                                    <span>Unduh File PDF</span>
+                                </a>
+                                <a
+                                    href={`/admin/export/pdf?kabupaten=${encodeURIComponent(selectedKabupaten)}&periode=${encodeURIComponent(selectedPeriod)}&stream=1`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 text-xs font-bold shadow-2xs hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150"
+                                >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    <span>Lihat / Cetak Langsung</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                        <Button type="button" variant="outline" onClick={() => setIsExportModalOpen(false)} className="font-bold">
+                            Tutup
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </>
